@@ -1,11 +1,15 @@
 import pygame
 
+from tabuleiro import bloco_tam
+
 
 class Bloco(pygame.sprite.Sprite):
 	def __init__(self, x, y):
 		super().__init__()
 		imgdef = pygame.image.load('graphics/chao/chao.png').convert()
+		imgdef = pygame.transform.smoothscale(imgdef, (bloco_tam, bloco_tam))
 		imgslc = pygame.image.load('graphics/chao/chao_slc.png').convert()
+		imgslc = pygame.transform.smoothscale(imgslc, (bloco_tam, bloco_tam))
 		self.imgs = {'def': imgdef, 'slc': imgslc}
 		self.imgatual = 'def'
 		self.image = self.imgs[self.imgatual]
