@@ -1,15 +1,17 @@
 import pygame
-from random import randint
+from random import randint, choice
 
 from main import s_res
 
 s_w, s_h = s_res
-width = s_w // 3
+width = s_w
 height = width
-bloco_qnt = 10
-bloco_tam = width // bloco_qnt
+bloco_qnt = 100
+bloco_tam = 64
+render_dist = 20
 
 from personagem import Aliado, Inimigo
+from bloco import Bloco
 
 
 class Tabuleiro:
@@ -17,9 +19,11 @@ class Tabuleiro:
 		from bloco import Bloco
 		grade = list()
 		sptlist = list()
-		for x in range(0, width, bloco_tam):
+		for c in range(0, bloco_qnt):
+			x = c * bloco_tam
 			coluna = list()
-			for y in range(0, height, bloco_tam):
+			for l in range(0, bloco_qnt):
+				y = l * bloco_tam
 				bloco = Bloco(x, y)
 				sptlist.append(bloco)
 				coluna.append(bloco)
@@ -37,9 +41,10 @@ class Tabuleiro:
 		self.dictaliados = dict()
 		self.dictinimigos = dict()
 		self.sptchao = None
+		self.sptchaoonscreen = pygame.sprite.Group()
 		self.sptaliados = pygame.sprite.Group()
 		self.sptinimigos = pygame.sprite.Group()
-		self.sptall = list()
+		self.sptall = pygame.sprite.Group()
 		self.mode_atual = 'def'
 		self.mode_tuple = ('def', 'slc', 'mov', 'atk')
 		self.mousepos = (-1, -1)
@@ -50,16 +55,14 @@ class Tabuleiro:
 		self.width = bloco_qnt * bloco_tam
 		self.height = self.width
 		self.surf = pygame.Surface((self.width, self.height))
-		self.rect = self.surf.get_rect(center=(s_w // 2, s_h // 2))
+		self.surf.fill('Red')
+		self.rect = self.surf.get_rect(center=(width//2, height//2))
 
-	# def update(self, width, height):
-	# 	self.width = width // 2
-	# 	self.height = width
-	# 	self.tam = (self.width, self.height)
-	# 	self.bloco_tam = self.width // self.qnt_blocos
-	# 	self.transf = (-(width - self.width) // 2, -(height - self.height) // 2)
-	# 	self.surf = pygame.Surface(self.tam)
-	# 	self.rect = self.surf.get_rect(center=(width // 2, height // 2))
+	def posicaoinicial(self):
+		foco = choice(self.sptaliados.sprites())
+		center_posx, center_posy = foco.rect.center
+		center_pos = ((s_w / 2) + (self.rect.w / 2) - center_posx, (s_h / 2) + (self.rect.h / 2) - center_posy)
+		self.rect = self.surf.get_rect(center=center_pos)
 
 	def add(self, tipo, nome=None):
 		if not nome:
@@ -75,7 +78,7 @@ class Tabuleiro:
 		else:
 			novo = None
 			print('tipo não reconhecido')
-		self.sptall.append(novo)
+		self.sptall.add(novo)
 		return novo
 
 	def persoslc(self, grupo: str = None):
@@ -100,27 +103,76 @@ class Tabuleiro:
 			return None
 
 	def mouseslc(self):
-		for bloco in self.sptchao:
+		bloco: Bloco
+		for bloco in self.sptchaoonscreen:
 			if not bloco.rect.collidepoint(self.mousepos):
 				bloco.imgdef()
 			else:
 				if not bloco.conteudo:
 					bloco.imgslc()
 
-	def moverobj(self, obj, posd):
-		novobloco = self.grade[posd[0]][posd[1]]
+	def moverobj(self, obj, pos_d):
+		novobloco = self.grade[pos_d[0]][pos_d[1]]
 		novobloco.imgdef()
+		pos_a = None
 		if obj.pos:
-			atualbloco = self.grade[obj.pos[0]][obj.pos[1]]
+			pos_a = obj.pos  # Posição atual será usada para limpar o render depois
+			atualbloco = self.grade[pos_a[0]][pos_a[1]]
 		else:
 			atualbloco = None
 		if not novobloco.conteudo:
 			if atualbloco:
 				atualbloco.conteudo = None
 			novobloco.conteudo = obj
-			obj.pos = posd
+			obj.pos = pos_d
 			obj.bloco = novobloco
 			obj.update()
+			self.renderchao(obj, pos_a)
 			return True
 		else:
 			print('bloco ocupado')
+
+	def renderchao(self, lista_objs: list | Aliado | Inimigo, pos_a):
+		obj: Aliado | Inimigo
+		if type(lista_objs) != list:
+			lista_objs = [lista_objs]
+		for obj in lista_objs:
+
+			if pos_a:
+				max_x = pos_a[0] + render_dist + 1
+				min_x = pos_a[0] - render_dist
+				max_y = pos_a[1] + render_dist + 1
+				min_y = pos_a[1] - render_dist
+				if max_x > bloco_qnt:
+					max_x = bloco_qnt
+				if min_x < 0:
+					min_x = 0
+				if max_y > bloco_qnt:
+					max_y = bloco_qnt
+				if min_y < 0:
+					min_y = 0
+				for y in range(min_y, max_y):
+					for x in range(min_x, max_x):
+						bloco = self.grade[x][y]
+						if len(pygame.sprite.Sprite.groups(bloco)) == 3:  # Grupo chao, chaoonscreen, obj.area
+							self.sptchaoonscreen.remove(bloco)
+						obj.area.remove(bloco)
+
+			max_x = obj.pos[0] + render_dist + 1
+			min_x = obj.pos[0] - render_dist
+			max_y = obj.pos[1] + render_dist + 1
+			min_y = obj.pos[1] - render_dist
+			if max_x > bloco_qnt:
+				max_x = bloco_qnt
+			if min_x < 0:
+				min_x = 0
+			if max_y > bloco_qnt:
+				max_y = bloco_qnt
+			if min_y < 0:
+				min_y = 0
+			for y in range(min_y, max_y):
+				for x in range(min_x, max_x):
+					bloco = self.grade[x][y]
+					obj.area.add(bloco)
+					self.sptchaoonscreen.add(bloco)
+
