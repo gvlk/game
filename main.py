@@ -1,6 +1,7 @@
 import pygame
 from pygame import freetype
 from sys import exit
+from random import randint
 
 from debug import debug
 
@@ -14,10 +15,18 @@ screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 pygame.display.set_caption('Jogo')
 font = pygame.freetype.Font('fontes/AlumniSansPinstripe-Regular.ttf', 24)
+scrolling = True
 
 
-def resize(w, h):
-	return pygame.display.set_mode((w, h), pygame.RESIZABLE)
+class Background:
+	def __init__(self, w, h):
+		self.oimage = pygame.image.load('graphics/background/background.png').convert()
+		self.image = pygame.transform.smoothscale(self.oimage, (w, h))
+		self.surf = self.image
+
+	def update(self, w, h):
+		self.image = pygame.transform.smoothscale(self.oimage, (w, h))
+		self.surf = self.image
 
 
 class Scrollbox(pygame.sprite.Sprite):
@@ -53,15 +62,20 @@ def gerarscrollbox(grupo):
 		grupo.add(box)
 
 
-class Background:
-	def __init__(self, w, h):
-		self.oimage = pygame.image.load('graphics/background/background.png').convert()
-		self.image = pygame.transform.smoothscale(self.oimage, (w, h))
-		self.surf = self.image
+def resize(w, h):
+	return pygame.display.set_mode((w, h), pygame.RESIZABLE)
 
-	def update(self, w, h):
-		self.image = pygame.transform.smoothscale(self.oimage, (w, h))
-		self.surf = self.image
+
+def gerartimes(tabuleiro, bloco_qnt, n: int = 4):
+	for i in range(0, 2 * n):
+		if i % 2 == 0:
+			membro = tabuleiro.add('ali')
+
+		else:
+			membro = tabuleiro.add('ini')
+		while True:
+			if tabuleiro.moverobj(membro, (randint(1, bloco_qnt), randint(1, bloco_qnt))):
+				break
 
 
 def main():
@@ -74,21 +88,13 @@ def main():
 	hud = Hud()
 	from personagem import Aliado, Inimigo
 
-	scrollboxes = pygame.sprite.Group()
-	gerarscrollbox(scrollboxes)
+	if scrolling:
+		scrollboxes = pygame.sprite.Group()
+		gerarscrollbox(scrollboxes)
+	else:
+		scrollboxes = tuple()
 
-	aliado1 = tabuleiro.add('ali', 'aliado1')
-	aliado2 = tabuleiro.add('ali', 'aliado2')
-	aliado3 = tabuleiro.add('ali', 'aliado3')
-	aliado4 = tabuleiro.add('ali', 'aliado4')
-	inimigo1 = tabuleiro.add('ini', 'inimigo1')
-
-	tabuleiro.moverobj(aliado1, (0, 0))
-	tabuleiro.moverobj(aliado2, (1, 2))
-	tabuleiro.moverobj(aliado3, (3, 4))
-	tabuleiro.moverobj(aliado4, (5, 6))
-	tabuleiro.moverobj(inimigo1, (6, 4))
-
+	gerartimes(tabuleiro, bloco_qnt, n=4)
 	tabuleiro.posicaoinicial()
 
 	# DEBUGRENDER1 = pygame.USEREVENT + 1
@@ -96,12 +102,18 @@ def main():
 
 	def execjogo():
 		mx = my = int()
-		ax, by = (-tabuleiro.rect.x, -tabuleiro.rect.y)  # Constantes para descobrir a posição do mouse relativa ao tabuleiro
+		ax, by = (-tabuleiro.rect.x, -tabuleiro.rect.y)
+		# Constantes para descobrir a posição do mouse relativa ao tabuleiro
 		mouse_scrollboxes = list()
 		centro = (width/2, height/2)
 		renderalltiles = True  # Primeiramente renderizar todos tiles
 		box: Scrollbox
 		perso: Aliado | Inimigo
+		obj: Aliado | Inimigo | None
+		obj = None
+		alvo: Aliado | Inimigo | None
+		alvo = None
+
 		while True:
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
@@ -116,59 +128,66 @@ def main():
 					mx, my = pygame.mouse.get_pos()
 					mouse_scrollboxes = [s for s in scrollboxes if s.rect.collidepoint((mx, my))]
 					tabuleiro.mousepos = (mx + ax, my + by)
-					mouseblo = (tabuleiro.mousepos[0] // bloco_tam, tabuleiro.mousepos[1] // bloco_tam)
-					if (0 <= mouseblo[0] <= bloco_qnt - 1) and (0 <= mouseblo[1] <= bloco_qnt - 1):
-						tabuleiro.mouseblo = mouseblo
-					else:
-						tabuleiro.mouseblo = (None, None)
 
 				elif event.type == pygame.MOUSEBUTTONDOWN:
-					if tabuleiro.mode_atual == 'def':
-						obj = tabuleiro.objslc
-						if obj:
-							tabuleiro.mode_atual = 'slc'
-					elif tabuleiro.mode_atual == 'atk':
-						tabuleiro.objslc.atacar()
-					else:
-						menuitem = hud.mouseslc((mx, my))
-						if menuitem:
-							if menuitem.nome == 'mov':
-								if tabuleiro.mode_atual != 'mov':
-									tabuleiro.objslc.update()
-									tabuleiro.objslc.imgslc()
-									tabuleiro.mode_atual = 'mov'
-							elif menuitem.nome == 'atk':
-								if tabuleiro.mode_atual != 'atk':
-									tabuleiro.objslc.imgatk()
-									tabuleiro.mode_atual = 'atk'
-						else:
-							if tabuleiro.mode_atual == 'atk':
-								tabuleiro.objslc.atacar()
+					if event.button == 1:
+
+						if tabuleiro.mode_atual != 'def':  # Primeiro checar se o menu foi clicado
+							menuitem = hud.mouseslc((mx, my))
+							if menuitem:
+								tabuleiro.resettile()
+
+								if menuitem.nome == 'mov':
+									if tabuleiro.mode_atual != 'mov':
+										if obj.mira:
+											tabuleiro.resetobj(obj.mira)
+										tabuleiro.resetobj(img='slc')
+										tabuleiro.mode_atual = 'mov'
+
+								elif menuitem.nome == 'atk':
+									if tabuleiro.mode_atual != 'atk':
+										tabuleiro.objslc.imgatk()
+										tabuleiro.mode_atual = 'atk'
+
+						if tabuleiro.mode_atual == 'def' or tabuleiro.mode_atual == 'slc':
+							obj = tabuleiro.hoverobj(click=True)
+							if obj:
+								tabuleiro.mode_atual = 'slc'
+
+						elif tabuleiro.mode_atual == 'atk':
+							if isinstance(tabuleiro.objslc, Aliado):
+								alvo = tabuleiro.hoverobj('ini')
+							elif isinstance(tabuleiro.objslc, Inimigo):
+								alvo = tabuleiro.hoverobj('ali')
+							if alvo:
+								tabuleiro.ataque(defensor=alvo, valor=1)
+								tabuleiro.mode_atual = 'def'
 
 				elif event.type == pygame.MOUSEBUTTONUP:
-					if tabuleiro.mode_atual == 'mov':
-						if not hud.crect.collidepoint((mx, my)):
-							if (tabuleiro.mouseblo[0] is not None) and (tabuleiro.mouseblo[1] is not None):
-								if tabuleiro.moverobj(tabuleiro.objslc, tabuleiro.mouseblo):
+					if event.button == 1:
+
+						if tabuleiro.mode_atual == 'mov':
+							if not hud.crect.collidepoint((mx, my)):
+								if tabuleiro.moverobj(tabuleiro.objslc, mode='pos'):
 									tabuleiro.mode_atual = 'def'
 
 				elif event.type == pygame.KEYDOWN:
 					if tabuleiro.mode_atual != 'def':
-						tabuleiro.mousepos = (-1, -1)
+						tabuleiro.resettile()
+
 						if event.key == pygame.K_ESCAPE:
-							tabuleiro.objslc.update()
-							tabuleiro.mouseslc()
+							tabuleiro.resetobj(limparslc=True)
 							tabuleiro.mode_atual = 'def'
+
 						elif event.key == pygame.K_q:
 							if tabuleiro.mode_atual != 'mov':
-								tabuleiro.persoslc()  # Tirar o destaque o atual alvo
-								tabuleiro.objslc.update()
-								tabuleiro.objslc.imgslc()
+								if obj.mira:
+									tabuleiro.resetobj(obj.mira)
+								tabuleiro.resetobj(img='slc')
 								tabuleiro.mode_atual = 'mov'
+
 						elif event.key == pygame.K_w:
 							if tabuleiro.mode_atual != 'atk':
-								tabuleiro.objslc.update()
-								tabuleiro.mouseslc()  # Resetar textura do bloco atual
 								tabuleiro.objslc.imgatk()
 								tabuleiro.mode_atual = 'atk'
 
@@ -191,6 +210,7 @@ def main():
 					tabuleiro.rect.move_ip(movex, movey)
 					ax, by = (-tabuleiro.rect.x, -tabuleiro.rect.y)
 
+			# Render
 			screen.blit(bg.surf, (0, 0))
 			# pygame.draw.rect(screen, 'Blue', (111, 20, 300, 300))
 			screen.blit(tabuleiro.surf, tabuleiro.rect)
@@ -204,49 +224,47 @@ def main():
 			tabuleiro.sptaliados.draw(tabuleiro.surf)
 			tabuleiro.sptinimigos.draw(tabuleiro.surf)
 
-			scrollboxes.draw(screen)
+			# scrollboxes.draw(screen)  Não precisa draw as scrollboxes ??? ue
 
-			if tabuleiro.mode_atual == 'def':
-				tabuleiro.persoslc()
-			else:
+			# Coisas que precisam acontecer constantemente
+			if tabuleiro.mode_atual == 'def' or tabuleiro.mode_atual == 'slc':
+				tabuleiro.hoverobj()
+
+			if tabuleiro.mode_atual != 'def':  # 'slc', 'mov', 'atk'
 				screen.blit(hud.hsurf, hud.hrect)
 				hud.hsurf.blit(hud.csurf, hud.crect)
 				hud.sptmenu.draw(screen)
 				hud.mouseslc((mx, my))
+
 				if tabuleiro.mode_atual == 'mov':
-					tabuleiro.mouseslc()
+					tabuleiro.hovertile()
+
 				elif tabuleiro.mode_atual == 'atk':
 					if isinstance(tabuleiro.objslc, Aliado):
-						tabuleiro.persoslc('ini')
+						tabuleiro.hoverobj('ini')
 					elif isinstance(tabuleiro.objslc, Inimigo):
-						tabuleiro.persoslc('ali')
+						tabuleiro.hoverobj('ali')
 
 			for perso in tabuleiro.sptall:
 				if perso.hb_show:
 					pygame.draw.rect(tabuleiro.surf, (255, 0, 0), perso.hrect)
 					pygame.draw.rect(tabuleiro.surf, (0, 0, 0), perso.hbbrect, 2)
 
-			debug(f'mx, my = {mx, my}')
-			debug(f'tabuleiro.mousepos = {tabuleiro.mousepos}', y=170)
-			debug(f'tabuleiro.mouseblo = {tabuleiro.mouseblo}', y=190)
-			debug(f'tabuleiro.mode_atual = {tabuleiro.mode_atual}', y=210)
-			debug(f'aliado1.pos = {aliado1.pos}', y=230)
-			debug(f'aliado2.pos = {aliado2.pos}', y=250)
-			debug(f'aliado3.pos = {aliado3.pos}', y=270)
-			debug(f'aliado4.pos = {aliado4.pos}', y=290)
-			debug(f'tabuleiro.sptchaoonscreen = {tabuleiro.sptchaoonscreen}', y=310)
+			debug(f'tabuleiro.mode_atual = {tabuleiro.mode_atual}')
+			debug(f'mx, my = {mx, my}', y=190)
+			debug(f'tabuleiro.mousepos = {tabuleiro.mousepos}', y=210)
+			debug(f'tile do mouse = {tabuleiro.mousepos[0] // bloco_tam, tabuleiro.mousepos[1] // bloco_tam}', y=230)
 			try:
 				debug(f'tabuleiro.objslc.nome = {tabuleiro.objslc.nome}', y=330)
 			except AttributeError:
 				debug(f'tabuleiro.objslc.nome = None', y=330)
 			try:
-				debug(f'aliado1.mira.nome = {aliado1.mira.nome}', y=350)
+				debug(f'tabuleiro.objslc.mira.nome = {tabuleiro.objslc.mira.nome}', y=350)
 			except AttributeError:
-				debug(f'aliado1.mira.nome = None', y=350)
-			debug(f'aliado1.current_health = {aliado1.current_health}', y=370)
-			debug(f'inimigo1.current_health = {inimigo1.current_health}', y=390)
-			debug(f'aliado1.hrect = {aliado1.hrect}', y=410)
-			debug(f'inimigo1.hrect = {inimigo1.hrect}', y=430)
+				debug(f'tabuleiro.objslc.mira.nome = None', y=350)
+			debug(f'tabuleiro.sptchaoonscreen = {tabuleiro.sptchaoonscreen}', y=370)
+			debug(f'tabuleiro.sptchao = {tabuleiro.sptchao}', y=390)
+			debug(f'n colunas, n linhas = {len(tabuleiro.grade), len(tabuleiro.grade[0])}', y=410)
 
 			pygame.display.update()
 			clock.tick(60)

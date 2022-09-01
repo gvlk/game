@@ -1,5 +1,5 @@
 import pygame
-from math import atan2, degrees
+from math import atan2, degrees, radians
 
 from tabuleiro import bloco_tam
 
@@ -8,12 +8,10 @@ class Aliado(pygame.sprite.Sprite):
 	def __init__(self, nome, pos=None):
 		super().__init__()
 		imgdef = pygame.image.load('graphics/aliados/aliado.png').convert_alpha()
-		imgdef = pygame.transform.smoothscale(imgdef, (bloco_tam, bloco_tam))
 		imgslc = pygame.image.load('graphics/aliados/aliado_slc.png').convert_alpha()
-		imgslc = pygame.transform.smoothscale(imgslc, (bloco_tam, bloco_tam))
 		imgatk = pygame.image.load('graphics/aliados/aliado_atk.png').convert_alpha()
-		imgatk = pygame.transform.smoothscale(imgatk, (bloco_tam, bloco_tam))
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
+		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
 		self.image = self.imgs[self.imgatual]
 		self.rect = self.image.get_rect()
@@ -21,7 +19,8 @@ class Aliado(pygame.sprite.Sprite):
 		self.nome = nome
 		self.bloco = None
 		self.mira: Aliado | Inimigo | None = None
-		self.area = pygame.sprite.Group()
+		self.miraangulos = dict()
+		self.area = pygame.sprite.Group()  # Grupo de sprites do chão o qual esse objeto causa a renderização
 		self.current_health = 8
 		self.maximum_health = 8
 		self.health_bar_length = 10
@@ -32,28 +31,34 @@ class Aliado(pygame.sprite.Sprite):
 		self.hrect = None
 		self.hbbrect = None
 
-	def update(self):
+	def update(self, img: str = 'def', rot: bool = True):
 		"""
-		Atualizar a posição do sprite para o bloco atual e retorna para a imagem padrão
+		Atualizar a posição do sprite para o bloco atual entre outras coisas
 		"""
+		self.imgf[img]()
 		self.rect = self.image.get_rect(topleft=(self.bloco.rect.x, self.bloco.rect.y))
-		self.imgdef()
 		self.hb_xy = ((self.current_health / self.health_ratio) * 5, 10)
 		self.hb_pos = (self.rect.x + 7, self.rect.y - self.hb_xy[1])
 		self.hrect = pygame.Rect(self.hb_pos, self.hb_xy)
 		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length * 5, self.hb_xy[1]))
+		self.mira = None
+		if rot:
+			self.miraangulos.clear()
 
 	def imgdef(self):
-		self.imgatual = 'def'
-		self.image = self.imgs[self.imgatual]
+		if self.imgatual != 'def':
+			self.imgatual = 'def'
+			self.image = self.imgs[self.imgatual]
 
 	def imgslc(self):
-		self.imgatual = 'slc'
-		self.image = self.imgs[self.imgatual]
+		if self.imgatual != 'slc':
+			self.imgatual = 'slc'
+			self.image = self.imgs[self.imgatual]
 
 	def imgatk(self):
-		self.imgatual = 'atk'
-		self.image = self.imgs[self.imgatual]
+		if self.imgatual != 'atk':
+			self.imgatual = 'atk'
+			self.image = self.imgs[self.imgatual]
 
 	def get_damage(self, valor):
 		if self.current_health > 0:
@@ -67,20 +72,30 @@ class Aliado(pygame.sprite.Sprite):
 		else:
 			self.current_health = self.maximum_health
 
-	def atacar(self):
-		self.mira.get_damage(1)
+	def atacar(self, valor: int = 1):
+		self.mira.get_damage(valor)
 		if self.mira.current_health < self.mira.maximum_health:
 			self.mira.hb_show = True
 		self.mira.update()
 
 	def rotate(self):
-		if self.mira:
+		if self.mira in self.miraangulos:
+			self.image = self.miraangulos[self.mira]['surf']
+			self.rect = self.miraangulos[self.mira]['rect']
+		else:
 			vetor1x, vetor1y = self.rect.center
 			vetor2x, vetor2y = self.mira.rect.center
 			angulo = atan2(vetor2y - vetor1y, vetor2x - vetor1x)
-			angulo = -degrees(angulo)
-			rotsurf = pygame.transform.rotate(self.imgs[self.imgatual], angulo)
+			if radians(-89) < angulo < radians(91):  # Não precisa inverter horizontalmente
+				angulo = -degrees(angulo)
+				img = self.imgs[self.imgatual]
+			else:
+				angulo = -degrees(angulo) + 180
+				img = pygame.transform.flip(self.imgs[self.imgatual], flip_x=True, flip_y=False)
+
+			rotsurf = pygame.transform.rotate(img, angulo)
 			rotrect = rotsurf.get_rect(center=self.rect.center)
+			self.miraangulos[self.mira] = {'surf': rotsurf, 'rect': rotrect}
 			self.image = rotsurf
 			self.rect = rotrect
 
@@ -95,6 +110,7 @@ class Inimigo(pygame.sprite.Sprite):
 		imgatk = pygame.image.load('graphics/inimigos/inimigo_atk.png').convert_alpha()
 		imgatk = pygame.transform.smoothscale(imgatk, (bloco_tam, bloco_tam))
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
+		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
 		self.image = self.imgs[self.imgatual]
 		self.rect = self.image.get_rect()
@@ -102,6 +118,7 @@ class Inimigo(pygame.sprite.Sprite):
 		self.nome = nome
 		self.bloco = None
 		self.mira: Aliado | Inimigo | None = None
+		self.miraangulos = dict()
 		self.area = pygame.sprite.Group()
 		self.current_health = 8
 		self.maximum_health = 8
@@ -113,26 +130,34 @@ class Inimigo(pygame.sprite.Sprite):
 		self.hrect = None
 		self.hbbrect = None
 
-	def update(self):
+	def update(self, img: str = 'def', rot: bool = True):
+		"""
+		Atualizar a posição do sprite para o bloco atual entre outras coisas
+		"""
+		self.imgf[img]()
 		self.rect = self.image.get_rect(topleft=(self.bloco.rect.x, self.bloco.rect.y))
-		self.imgdef()
 		self.hb_xy = ((self.current_health / self.health_ratio) * 5, 10)
 		self.hb_pos = (self.rect.x + 7, self.rect.y - self.hb_xy[1])
 		self.hrect = pygame.Rect(self.hb_pos, self.hb_xy)
 		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length * 5, self.hb_xy[1]))
-
+		self.mira = None
+		if rot:
+			self.miraangulos.clear()
 
 	def imgdef(self):
-		self.imgatual = 'def'
-		self.image = self.imgs[self.imgatual]
+		if self.imgatual != 'def':
+			self.imgatual = 'def'
+			self.image = self.imgs[self.imgatual]
 
 	def imgslc(self):
-		self.imgatual = 'slc'
-		self.image = self.imgs[self.imgatual]
+		if self.imgatual != 'slc':
+			self.imgatual = 'slc'
+			self.image = self.imgs[self.imgatual]
 
 	def imgatk(self):
-		self.imgatual = 'atk'
-		self.image = self.imgs[self.imgatual]
+		if self.imgatual != 'atk':
+			self.imgatual = 'atk'
+			self.image = self.imgs[self.imgatual]
 
 	def get_damage(self, valor):
 		if self.current_health > 0:
@@ -146,19 +171,29 @@ class Inimigo(pygame.sprite.Sprite):
 		else:
 			self.current_health = self.maximum_health
 
-	def atacar(self):
-		self.mira.get_damage(1)
+	def atacar(self, valor: int = 1):
+		self.mira.get_damage(valor)
 		if self.mira.current_health < self.mira.maximum_health:
 			self.mira.hb_show = True
 		self.mira.update()
 
 	def rotate(self):
-		if self.mira:
+		if self.mira in self.miraangulos:
+			self.image = self.miraangulos[self.mira]['surf']
+			self.rect = self.miraangulos[self.mira]['rect']
+		else:
 			vetor1x, vetor1y = self.rect.center
 			vetor2x, vetor2y = self.mira.rect.center
 			angulo = atan2(vetor2y - vetor1y, vetor2x - vetor1x)
-			angulo = -degrees(angulo)
-			rotsurf = pygame.transform.rotate(self.imgs[self.imgatual], angulo)
+			if radians(-89) < angulo < radians(91):  # Não precisa inverter horizontalmente
+				angulo = -degrees(angulo)
+				img = self.imgs[self.imgatual]
+			else:
+				angulo = -degrees(angulo) + 180
+				img = pygame.transform.flip(self.imgs[self.imgatual], flip_x=True, flip_y=False)
+
+			rotsurf = pygame.transform.rotate(img, angulo)
 			rotrect = rotsurf.get_rect(center=self.rect.center)
+			self.miraangulos[self.mira] = {'surf': rotsurf, 'rect': rotrect}
 			self.image = rotsurf
 			self.rect = rotrect
