@@ -7,6 +7,7 @@ from debug import debug
 
 if __name__ == "__main__":
 	pygame.init()
+	pygame.freetype.init()
 
 width = 1450
 height = int((width * (9 / 16)))
@@ -113,6 +114,11 @@ def main():
 		obj = None
 		alvo: Aliado | Inimigo | None
 		alvo = None
+		membroiter = {
+			'i': -1,
+			'ali': list(tabuleiro.sptaliados),
+			'ini': list(tabuleiro.sptinimigos)
+		}
 
 		while True:
 			for event in pygame.event.get():
@@ -150,9 +156,13 @@ def main():
 										tabuleiro.mode_atual = 'atk'
 
 						if tabuleiro.mode_atual == 'def' or tabuleiro.mode_atual == 'slc':
-							obj = tabuleiro.hoverobj(click=True)
-							if obj:
-								tabuleiro.mode_atual = 'slc'
+							if tabuleiro.tileocupada():
+								obj = tabuleiro.hoverobj(click=True)
+								if obj:
+									tabuleiro.mode_atual = 'slc'
+							else:
+								tabuleiro.resetobj(limparslc=True)
+								tabuleiro.mode_atual = 'def'
 
 						elif tabuleiro.mode_atual == 'atk':
 							if isinstance(tabuleiro.objslc, Aliado):
@@ -168,7 +178,7 @@ def main():
 
 						if tabuleiro.mode_atual == 'mov':
 							if not hud.crect.collidepoint((mx, my)):
-								if tabuleiro.moverobj(tabuleiro.objslc, mode='pos'):
+								if tabuleiro.moverobj2(tabuleiro.objslc):
 									tabuleiro.mode_atual = 'def'
 
 				elif event.type == pygame.KEYDOWN:
@@ -190,6 +200,32 @@ def main():
 							if tabuleiro.mode_atual != 'atk':
 								tabuleiro.objslc.imgatk()
 								tabuleiro.mode_atual = 'atk'
+
+						elif event.key == pygame.K_d:
+							if tabuleiro.objslc:
+								if isinstance(tabuleiro.objslc, Aliado):
+									time = 'ali'
+								else:
+									time = 'ini'
+								membroiter['i'] = membroiter[time].index(tabuleiro.objslc)
+								membroiter['i'] += 1
+								if membroiter['i'] > len(membroiter[time]) - 1:
+									membroiter['i'] = 0
+								tabuleiro.objslc = membroiter[time][membroiter['i']]
+								tabuleiro.hoverobj()  # Quando muda para 'mov' objslc que mostra selecionado
+
+						elif event.key == pygame.K_a:
+							if tabuleiro.objslc:
+								if isinstance(tabuleiro.objslc, Aliado):
+									time = 'ali'
+								else:
+									time = 'ini'
+								membroiter['i'] = membroiter[time].index(tabuleiro.objslc)
+								membroiter['i'] -= 1
+								if membroiter['i'] < 0:
+									membroiter['i'] = len(membroiter[time]) - 1
+								tabuleiro.objslc = membroiter[time][membroiter['i']]
+								tabuleiro.hoverobj()
 
 				# elif event.type == DEBUGRENDER1:
 				# 	if ligado:
@@ -235,6 +271,9 @@ def main():
 				hud.hsurf.blit(hud.csurf, hud.crect)
 				hud.sptmenu.draw(screen)
 				hud.mouseslc((mx, my))
+				hud_botleft_surf, hud_botleft_rect = hud.bottomleftcontainer(tabuleiro.objslc)
+				pygame.draw.rect(screen, hud.botleftcont_fundo_cor, hud.botleftcont_fundo)
+				screen.blit(hud_botleft_surf, hud_botleft_rect)
 
 				if tabuleiro.mode_atual == 'mov':
 					tabuleiro.hovertile()
@@ -254,17 +293,8 @@ def main():
 			debug(f'mx, my = {mx, my}', y=190)
 			debug(f'tabuleiro.mousepos = {tabuleiro.mousepos}', y=210)
 			debug(f'tile do mouse = {tabuleiro.mousepos[0] // bloco_tam, tabuleiro.mousepos[1] // bloco_tam}', y=230)
-			try:
-				debug(f'tabuleiro.objslc.nome = {tabuleiro.objslc.nome}', y=330)
-			except AttributeError:
-				debug(f'tabuleiro.objslc.nome = None', y=330)
-			try:
-				debug(f'tabuleiro.objslc.mira.nome = {tabuleiro.objslc.mira.nome}', y=350)
-			except AttributeError:
-				debug(f'tabuleiro.objslc.mira.nome = None', y=350)
 			debug(f'tabuleiro.sptchaoonscreen = {tabuleiro.sptchaoonscreen}', y=370)
 			debug(f'tabuleiro.sptchao = {tabuleiro.sptchao}', y=390)
-			debug(f'n colunas, n linhas = {len(tabuleiro.grade), len(tabuleiro.grade[0])}', y=410)
 
 			pygame.display.update()
 			clock.tick(60)

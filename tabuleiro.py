@@ -19,10 +19,10 @@ class Tabuleiro:
 		from bloco import Bloco
 		grade = list()
 		sptlist = list()
-		for c in range(0, bloco_qnt+2):
+		for c in range(0, bloco_qnt + 2):
 			x = c * bloco_tam
 			coluna = list()
-			for l in range(0, bloco_qnt+2):
+			for l in range(0, bloco_qnt + 2):
 				y = l * bloco_tam
 				bloco = Bloco(x, y)
 				if l == 0 or l == bloco_qnt + 1 or c == 0 or c == bloco_qnt + 1:
@@ -54,7 +54,7 @@ class Tabuleiro:
 		self.height = self.width
 		self.surf = pygame.Surface((self.width, self.height))
 		self.surf.fill('Red')
-		self.rect = self.surf.get_rect(center=(width//2, height//2))
+		self.rect = self.surf.get_rect(center=(width // 2, height // 2))
 
 	def posicaoinicial(self):
 		center_posx, center_posy = choice(self.sptaliados.sprites()).rect.center
@@ -66,7 +66,7 @@ class Tabuleiro:
 			if tipo == 'ali':
 				nome = f'aliado{randint(100, 999)}'
 			else:
-				nome = f'aliado{randint(100, 999)}'
+				nome = f'inimigo{randint(100, 999)}'
 		if tipo == 'ali':
 			novo = Aliado(nome)
 			self.dictaliados[nome] = novo
@@ -81,6 +81,7 @@ class Tabuleiro:
 		self.sptall.add(novo)
 		return novo
 
+	# TODO: atualizar função levando em consideração a função self.tileocupada
 	def hoverobj(self, grupo: str = None, click: bool = False):
 		"""
 		Retorna o objeto apontado pelo mouse
@@ -109,6 +110,9 @@ class Tabuleiro:
 							self.objslc.rotate()
 						else:
 							return obj
+			else:
+				obj.imgslc()
+
 		if not click:
 			return None
 		else:
@@ -128,6 +132,9 @@ class Tabuleiro:
 						bloco.imgslc()
 
 	def moverobj(self, obj, pos_d: tuple = None, mode: str = 'cor'):
+		"""
+		mode = 'cor', mover baseado em cordenadas x / y do tabuleiro, mode = pos, mover baseado na posição do mouse
+		"""
 		if mode == 'cor':
 			if pos_d[0] < 1:
 				pos_d = (1, pos_d[1])
@@ -163,6 +170,26 @@ class Tabuleiro:
 		else:
 			print('bloco ocupado')
 			return False
+
+	# TODO: Fazer a movimentação dos personagens levando em consideração quantidade de tiles, etc.
+	def moverobj2(self, obj, pos_d: tuple = None) -> bool:
+		if not pos_d:
+			pos_d = (self.mousepos[0] // bloco_tam, self.mousepos[1] // bloco_tam)
+		novobloco = self.grade[pos_d[0]][pos_d[1]]
+		pos_a = obj.pos  # Posição atual será usada para limpar o render depois
+		atualbloco = self.grade[pos_a[0]][pos_a[1]]
+		if not novobloco.conteudo:
+			atualbloco.conteudo = None
+			novobloco.conteudo = obj
+			obj.pos = pos_d
+			obj.bloco = novobloco
+			obj.update()
+			self.renderchao(obj, pos_a)
+			self.objslc = None
+			self.removermira(obj)
+			return True  # Movimento realizado
+		else:
+			return False  # Tile ocupado
 
 	def renderchao(self, lista_objs: list | Aliado | Inimigo, pos_a):
 		obj: Aliado | Inimigo
@@ -213,9 +240,25 @@ class Tabuleiro:
 		Tile sob o mouse retorna para 'imgdef'
 		"""
 		tile: Bloco
-		tile = self.grade[self.mousepos[0] // bloco_tam][self.mousepos[1] // bloco_tam]
-		if not tile.ind:
-			tile.imgdef()
+		try:
+			tile = self.grade[self.mousepos[0] // bloco_tam][self.mousepos[1] // bloco_tam]
+		except IndexError:
+			pass  # Mouse está fora do tabuleiro
+		else:
+			if not tile.ind:
+				tile.imgdef()
+
+	def tileocupada(self):
+		tile: Bloco
+		try:
+			tile = self.grade[self.mousepos[0] // bloco_tam][self.mousepos[1] // bloco_tam]
+		except IndexError:
+			return False  # Mouse está fora do tabuleiro
+		else:
+			if tile.conteudo is None:
+				return False
+			else:
+				return True
 
 	def resetobj(self, obj: Aliado | Inimigo = None, limparslc: bool = False, img: str = 'def', rot: bool = False):
 		if not obj:
@@ -238,14 +281,11 @@ class Tabuleiro:
 			if obj in perso.miraangulos:
 				del perso.miraangulos[obj]
 
-	def ataque(self, atacante: Aliado | Inimigo | None = None, defensor: Aliado | Inimigo | None = None, valor: int = 1):
+	def ataque(self, atacante: Aliado | Inimigo | None = None, defensor: Aliado | Inimigo | None = None,
+	           valor: int = 1):
 		if not atacante:
 			atacante = self.objslc
 		atacante.mira = defensor
 		atacante.atacar(valor)
 		atacante.update()
 		self.objslc = None
-
-
-
-
