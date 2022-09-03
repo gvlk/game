@@ -1,7 +1,5 @@
 import pygame
 
-from tabuleiro import bloco_tam
-
 
 class Bloco(pygame.sprite.Sprite):
 	def __init__(self, x, y):
@@ -15,6 +13,11 @@ class Bloco(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect(topleft=(x, y))
 		self.conteudo = None
 		self.ind = False
+		self.gcost = int()
+		self.hcost = int()
+		self.fcost = int()
+		self.parent = None
+		self.movs = dict()  # Dicionário de movimentos para cada personagem
 
 	def imgdef(self):
 		if self.imgatual != 'def':

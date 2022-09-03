@@ -1,8 +1,6 @@
 import pygame
 from math import atan2, degrees, radians
 
-from tabuleiro import bloco_tam
-
 
 class Aliado(pygame.sprite.Sprite):
 	def __init__(self, nome, pos=None):
@@ -30,13 +28,15 @@ class Aliado(pygame.sprite.Sprite):
 		self.hb_xy = None
 		self.hrect = None
 		self.hbbrect = None
+		self.spd = 7
+		self.areamov = set()
 
 	def update(self, img: str = 'def', rot: bool = True):
 		"""
 		Atualizar a posição do sprite para o bloco atual entre outras coisas
 		"""
 		self.imgf[img]()
-		self.rect = self.image.get_rect(topleft=(self.bloco.rect.x, self.bloco.rect.y))
+		self.rect = self.image.get_rect(midbottom=(self.bloco.rect.midbottom))
 		self.hb_xy = ((self.current_health / self.health_ratio) * 5, 10)
 		self.hb_pos = (self.rect.x + 7, self.rect.y - self.hb_xy[1])
 		self.hrect = pygame.Rect(self.hb_pos, self.hb_xy)
@@ -104,11 +104,8 @@ class Inimigo(pygame.sprite.Sprite):
 	def __init__(self, nome, pos=None):
 		super().__init__()
 		imgdef = pygame.image.load('graphics/inimigos/inimigo.png').convert_alpha()
-		imgdef = pygame.transform.smoothscale(imgdef, (bloco_tam, bloco_tam))
 		imgslc = pygame.image.load('graphics/inimigos/inimigo_slc.png').convert_alpha()
-		imgslc = pygame.transform.smoothscale(imgslc, (bloco_tam, bloco_tam))
 		imgatk = pygame.image.load('graphics/inimigos/inimigo_atk.png').convert_alpha()
-		imgatk = pygame.transform.smoothscale(imgatk, (bloco_tam, bloco_tam))
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
 		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
@@ -129,13 +126,15 @@ class Inimigo(pygame.sprite.Sprite):
 		self.hb_xy = None
 		self.hrect = None
 		self.hbbrect = None
+		self.spd = 3
+		self.areamov = set()
 
 	def update(self, img: str = 'def', rot: bool = True):
 		"""
 		Atualizar a posição do sprite para o bloco atual entre outras coisas
 		"""
 		self.imgf[img]()
-		self.rect = self.image.get_rect(topleft=(self.bloco.rect.x, self.bloco.rect.y))
+		self.rect = self.image.get_rect(midbottom=self.bloco.rect.midbottom)
 		self.hb_xy = ((self.current_health / self.health_ratio) * 5, 10)
 		self.hb_pos = (self.rect.x + 7, self.rect.y - self.hb_xy[1])
 		self.hrect = pygame.Rect(self.hb_pos, self.hb_xy)
