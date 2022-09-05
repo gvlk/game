@@ -3,7 +3,7 @@ from random import randint
 from math import sqrt
 
 bloco_qnt = 5  # Mais 2 tiles externos de borda
-bloco_tam = 32
+bloco_tam = 128
 render_dist = 20
 
 from personagem import Aliado, Inimigo
@@ -89,8 +89,13 @@ class Tabuleiro:
 		elif grupo == 'ini':
 			grupo = self.sptinimigos
 		for obj in grupo:
+			pos_in_mask = self.mousepos[0] - obj.rect.x, self.mousepos[1] - obj.rect.y
 			if obj is not self.objslc:
-				if not obj.rect.collidepoint(self.mousepos):
+				try:
+					mask_touch = obj.mask.get_at(pos_in_mask)
+				except IndexError:
+					mask_touch = 0
+				if not mask_touch:
 					obj.imgdef()
 				else:
 					obj.imgslc()
@@ -127,7 +132,7 @@ class Tabuleiro:
 		novobloco: Bloco
 		atualbloco: Bloco | None
 		if not pos_d:
-			pos_d = (self.mousepos[0] // bloco_tam, self.mousepos[1] // bloco_tam)
+			pos_d = (int(self.mousepos[0] // bloco_tam), int(self.mousepos[1] // bloco_tam))
 		try:
 			novobloco = self.grade[pos_d[0]][pos_d[1]]
 		except IndexError:  # Mouse fora do tabuleiro
@@ -303,24 +308,12 @@ class Tabuleiro:
 		"""
 		tile: Bloco
 		try:
-			tile = self.grade[self.mousepos[0] // bloco_tam][self.mousepos[1] // bloco_tam]
+			tile = self.grade[int(self.mousepos[0] // bloco_tam)][int(self.mousepos[1] // bloco_tam)]
 		except IndexError:
 			pass  # Mouse está fora do tabuleiro
 		else:
 			if not tile.ind:
 				tile.imgdef()
-
-	def tileocupada(self):
-		tile: Bloco
-		try:
-			tile = self.grade[self.mousepos[0] // bloco_tam][self.mousepos[1] // bloco_tam]
-		except IndexError:
-			return False  # Mouse está fora do tabuleiro
-		else:
-			if tile.conteudo is None:
-				return False
-			else:
-				return True
 
 	def resetobj(self, obj: Aliado | Inimigo = None, limparslc: bool = False, img: str = 'def', rot: bool = False):
 		if not obj:

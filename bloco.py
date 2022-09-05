@@ -4,9 +4,12 @@ import pygame
 class Bloco(pygame.sprite.Sprite):
 	def __init__(self, x, y):
 		super().__init__()
-		imgdef = pygame.image.load('graphics/chao/chao.png').convert()
-		imgslc = pygame.image.load('graphics/chao/chao_slc.png').convert()
-		imgind = pygame.image.load('graphics/chao/chao_ind.png').convert()
+		imgdef = pygame.image.load('graphics/chao/chao.png')
+		imgslc = pygame.image.load('graphics/chao/chao_slc.png')
+		imgind = pygame.image.load('graphics/chao/chao_ind.png')
+		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
+		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
+		imgind = pygame.transform.scale(imgind, pygame.math.Vector2(imgind.get_size()) * 4).convert_alpha()
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'ind': imgind}
 		self.imgatual = 'def'
 		self.image = self.imgs[self.imgatual]

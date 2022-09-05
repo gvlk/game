@@ -5,13 +5,17 @@ from math import atan2, degrees, radians
 class Aliado(pygame.sprite.Sprite):
 	def __init__(self, nome, pos=None):
 		super().__init__()
-		imgdef = pygame.image.load('graphics/aliados/aliado.png').convert_alpha()
-		imgslc = pygame.image.load('graphics/aliados/aliado_slc.png').convert_alpha()
-		imgatk = pygame.image.load('graphics/aliados/aliado_atk.png').convert_alpha()
+		imgdef = pygame.image.load('graphics/aliados/aliado.png')
+		imgslc = pygame.image.load('graphics/aliados/aliado_slc.png')
+		imgatk = pygame.image.load('graphics/aliados/aliado_atk.png')
+		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
+		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
+		imgatk = pygame.transform.scale(imgatk, pygame.math.Vector2(imgatk.get_size()) * 4).convert_alpha()
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
 		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
 		self.image = self.imgs[self.imgatual]
+		self.mask = pygame.mask.from_surface(self.image)
 		self.rect = self.image.get_rect()
 		self.pos = pos
 		self.nome = nome
@@ -103,13 +107,17 @@ class Aliado(pygame.sprite.Sprite):
 class Inimigo(pygame.sprite.Sprite):
 	def __init__(self, nome, pos=None):
 		super().__init__()
-		imgdef = pygame.image.load('graphics/inimigos/inimigo.png').convert_alpha()
-		imgslc = pygame.image.load('graphics/inimigos/inimigo_slc.png').convert_alpha()
-		imgatk = pygame.image.load('graphics/inimigos/inimigo_atk.png').convert_alpha()
+		imgdef = pygame.image.load('graphics/inimigos/inimigo.png')
+		imgslc = pygame.image.load('graphics/inimigos/inimigo_slc.png')
+		imgatk = pygame.image.load('graphics/inimigos/inimigo_atk.png')
+		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
+		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
+		imgatk = pygame.transform.scale(imgatk, pygame.math.Vector2(imgatk.get_size()) * 4).convert_alpha()
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
 		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
 		self.image = self.imgs[self.imgatual]
+		self.mask = pygame.mask.from_surface(self.image)
 		self.rect = self.image.get_rect()
 		self.pos = pos
 		self.nome = nome

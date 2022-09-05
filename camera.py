@@ -95,7 +95,11 @@ class CameraGroup(pygame.sprite.Group):
 	def drawsprites(self, tabuleiro, mouse):
 		self.mouse_control(mouse)
 		self.keyboard_control()
+
 		tabuleiro.rect = self.tabuleiro_pos()
+
+		self.internal_surf.fill('Grey')
+
 		for sprite in self.ground:
 			offset_pos = sprite.rect.topleft
 			self.surface.blit(sprite.image, offset_pos)
@@ -104,5 +108,8 @@ class CameraGroup(pygame.sprite.Group):
 			offset_pos = sprite.rect.topleft
 			self.surface.blit(sprite.image, offset_pos)
 
-		self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
-		self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))
+		self.internal_surf.blit(tabuleiro.surf, tabuleiro.rect)
+
+		# self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
+		# self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))
+
