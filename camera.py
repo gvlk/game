@@ -1,5 +1,6 @@
 import pygame
 from main import s_res
+from personagem import Aliado, Inimigo
 
 
 class CameraGroup(pygame.sprite.Group):
@@ -20,7 +21,7 @@ class CameraGroup(pygame.sprite.Group):
 		w = s_res[0] - (self.camera_border['left'] + self.camera_border['right'])
 		h = s_res[1] - (self.camera_border['top'] + self.camera_border['bottom'])
 		self.camera_rect = pygame.Rect(l, t, w, h)
-		self.keyboard_speed = 5
+		self.keyboard_speed = 15
 		self.mouse_speed = 0.4
 		self.zoom = 1
 		self.internal_surf_size = (2500, 2500)
@@ -38,13 +39,26 @@ class CameraGroup(pygame.sprite.Group):
 		self.offset.y = (tabuleiro.rect.h / 2) - alvo.rect.centery
 		tabuleiro.rect = self.tabuleiro_pos()
 
-	def mouse_control(self, mouse):
+	def mouse_control(self, left, right, top, bottom, mouse):
 		mouse = pygame.math.Vector2(mouse)
 		mouse_offset = pygame.math.Vector2()
-		left_border = self.camera_border['left']
-		top_border = self.camera_border['top']
-		right_border = s_res[0] - self.camera_border['right']
-		bottom_border = s_res[1] - self.camera_border['bottom']
+		limite = self.internal_surf_size[0]/2
+		if left < limite:
+			left_border = self.camera_border['left']
+		else:
+			left_border = 0
+		if right > limite:
+			right_border = s_res[0] - self.camera_border['right']
+		else:
+			right_border = s_res[0]
+		if top < limite:
+			top_border = self.camera_border['top']
+		else:
+			top_border = 0
+		if bottom > limite:
+			bottom_border = s_res[1] - self.camera_border['bottom']
+		else:
+			bottom_border = s_res[1]
 
 		if top_border < mouse.y < bottom_border:
 			if mouse.x < left_border:
@@ -77,24 +91,30 @@ class CameraGroup(pygame.sprite.Group):
 
 		self.offset -= mouse_offset * self.mouse_speed
 
-	def keyboard_control(self):
+	def keyboard_control(self, left, right, top, bottom):
+		limite = self.internal_surf_size[0]/2
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_LEFT]:
-			self.offset.x -= self.keyboard_speed
+			if left < limite:
+				self.offset.x += self.keyboard_speed
 		elif keys[pygame.K_RIGHT]:
-			self.offset.x += self.keyboard_speed
+			if right > limite:
+				self.offset.x -= self.keyboard_speed
 		if keys[pygame.K_UP]:
-			self.offset.y -= self.keyboard_speed
+			if top < limite:
+				self.offset.y += self.keyboard_speed
 		elif keys[pygame.K_DOWN]:
-			self.offset.y += self.keyboard_speed
+			if bottom > limite:
+				self.offset.y -= self.keyboard_speed
 
 	def tabuleiro_pos(self):
 		offset_pos = pygame.math.Vector2(self.half_w, self.half_h) + self.offset + self.internal_offset
 		return self.surface.get_rect(center=offset_pos)
 
 	def drawsprites(self, tabuleiro, mouse):
-		self.mouse_control(mouse)
-		self.keyboard_control()
+		sprite: Aliado | Inimigo
+		self.mouse_control(tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom, mouse)
+		self.keyboard_control(tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom)
 
 		tabuleiro.rect = self.tabuleiro_pos()
 
@@ -105,11 +125,14 @@ class CameraGroup(pygame.sprite.Group):
 			self.surface.blit(sprite.image, offset_pos)
 
 		for sprite in sorted(self.sprites(), key=lambda sprite: sprite.rect.centery):
+			self.surface.blit(sprite.sombra_surf, sprite.sombra_rect)
 			offset_pos = sprite.rect.topleft
 			self.surface.blit(sprite.image, offset_pos)
+			if sprite.hb_show:  # Health Bar
+				pygame.draw.rect(self.surface, (255, 0, 0), sprite.hrect)
+				pygame.draw.rect(self.surface, (0, 0, 0), sprite.hbbrect, 2)
 
 		self.internal_surf.blit(tabuleiro.surf, tabuleiro.rect)
 
 		# self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
 		# self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))
-

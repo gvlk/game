@@ -1,7 +1,7 @@
 import pygame
 from pygame import freetype
 from sys import exit
-from random import randint
+from random import randint, choice
 from pygame.math import Vector2
 
 from debug import debug
@@ -32,17 +32,19 @@ class Background:
 class Mouse(pygame.sprite.Sprite):
 	def __init__(self):
 		super().__init__()
-		self.image = pygame.image.load('graphics/detalhes/mosue.png')
-		self.mask = pygame.mask.from_surface(self.image)
+		image = pygame.image.load('graphics/detalhes/mosue.png')
+		self.image = pygame.transform.scale(image, pygame.math.Vector2(image.get_size()) * 4).convert_alpha()
 		self.rect = self.image.get_rect()
 
 
-def gerartimes(tabuleiro, bloco_qnt, n: int = 4):
+def gerartimes(tabuleiro, bloco_qnt, n: int = 2):
 	for i in range(0, 2 * n):
 		if i % 2 == 0:
 			membro = tabuleiro.add('ali')
+			print()
 		else:
 			membro = tabuleiro.add('ini')
+			print()
 		while True:
 			if tabuleiro.moverobj(membro, (randint(1, bloco_qnt), randint(1, bloco_qnt))):
 				break
@@ -59,36 +61,31 @@ def main():
 
 	# bg = Background(width, height)
 
-	from tabuleiro import Tabuleiro, bloco_tam
+	from tabuleiro import Tabuleiro, bloco_qnt
 	tabuleiro = Tabuleiro()
 	from hud import Hud
 	hud = Hud()
 	from personagem import Aliado, Inimigo
 	camera = tabuleiro.camera_group
 	mouse = Mouse()
+	mousegroup = pygame.sprite.GroupSingle(mouse)
 
-	personagem1 = tabuleiro.add('ali')
-	personagem2 = tabuleiro.add('ini')
-	personagem3 = tabuleiro.add('ali')
-	personagem4 = tabuleiro.add('ini')
-	tabuleiro.moverobj(personagem1, (1, 1))
-	tabuleiro.moverobj(personagem2, (1, 2))
-	tabuleiro.moverobj(personagem3, (2, 1))
-	tabuleiro.moverobj(personagem4, (5, 5))
+	gerartimes(tabuleiro, bloco_qnt)
 
-	# camera.centralizar_alvo(personagem1, tabuleiro)
-
-	# tabuleiro.findpath((1, 1), (5, 5))
+	camera.centralizar_alvo(choice(list(tabuleiro.sptall)), tabuleiro)
 
 	def execjogo():
 		global screen
 		# Constantes para descobrir a posição do mouse relativa ao tabuleiro
+		perso: Aliado | Inimigo
+		alvo: Aliado | Inimigo | None
+		movimentando: Aliado | Inimigo | None
 		mouse_pos = pygame.math.Vector2()
 		offset = pygame.math.Vector2()
 		renderalltiles = False  # Primeiramente renderizar todos tiles
-		perso: Aliado | Inimigo
-		alvo: Aliado | Inimigo | None
 		alvo = None
+		movimentar = False
+		movimentando = None
 		membroiter = {
 			'i': -1,
 			'ali': list(tabuleiro.sptaliados),
@@ -119,7 +116,7 @@ def main():
 						if tabuleiro.mode_atual != 'def':
 							menuitem = hud.mouseslc(mouse_pos)
 							if menuitem:  # Primeiro checar se o menu foi clicado
-								tabuleiro.resettile()
+								tabuleiro.resettiles()
 
 								if menuitem.nome == 'mov':
 									if tabuleiro.mode_atual != 'mov':
@@ -133,8 +130,8 @@ def main():
 										tabuleiro.mode_atual = 'atk'
 
 						if tabuleiro.mode_atual == 'def' or tabuleiro.mode_atual == 'slc':
-							obj = tabuleiro.hoverobj(click=True)
-							if obj:
+							if tabuleiro.tileocupada():
+								tabuleiro.hoverobj(click=True)
 								tabuleiro.mode_atual = 'slc'
 							else:
 								tabuleiro.resetobj(limparslc=True)  # Imagem do membro selecionado volta para default
@@ -150,8 +147,12 @@ def main():
 
 						if tabuleiro.mode_atual == 'mov':
 							if not hud.crect.collidepoint(mouse_pos):
+								movimentando = tabuleiro.objslc
 								if tabuleiro.moverobj(tabuleiro.objslc):
+									movimentar = True
 									tabuleiro.mode_atual = 'def'
+								else:
+									movimentando = None
 
 				elif event.type == pygame.KEYDOWN:
 					if event.key == pygame.K_BACKSPACE:
@@ -159,14 +160,15 @@ def main():
 						exit()
 
 					if tabuleiro.mode_atual != 'def':
-						tabuleiro.resettile()
-
 						if event.key == pygame.K_ESCAPE:
+							tabuleiro.resettiles([tabuleiro.objslc.bloco])  # Resetar o bloco atual
+							tabuleiro.resettiles(tabuleiro.objslc.areamov)  # Resetar os blocos da área de movimento
 							tabuleiro.resetobj(limparslc=True)
 							tabuleiro.mode_atual = 'def'
 
 						elif event.key == pygame.K_q:
 							if tabuleiro.mode_atual != 'mov':
+								tabuleiro.resettiles(tabuleiro.objslc.areamov)  # Resetar os blocos da área de movimento
 								if tabuleiro.objslc.mira:
 									tabuleiro.resetobj(tabuleiro.objslc.mira)
 								tabuleiro.resetobj(img='slc')
@@ -174,43 +176,59 @@ def main():
 
 						elif event.key == pygame.K_w:
 							if tabuleiro.mode_atual != 'atk':
+								tabuleiro.resettiles(tabuleiro.objslc.areamov)  # Resetar os blocos da área de movimento
 								tabuleiro.objslc.imgatk()
 								tabuleiro.mode_atual = 'atk'
 
-						elif event.key == pygame.K_d:
+						elif event.key == pygame.K_d or event.key == pygame.K_a:
+							tabuleiro.resettiles([tabuleiro.objslc.bloco])  # Resetar o bloco atual
+							tabuleiro.resettiles(tabuleiro.objslc.areamov)  # Resetar os blocos da área de movimento
+							if tabuleiro.objslc.mira:
+								tabuleiro.resetobj(tabuleiro.objslc.mira)
+							tabuleiro.resetobj()  # Resetar a rotação do objeto atual
 							if tabuleiro.objslc:
-								if isinstance(tabuleiro.objslc, Aliado):
+								if isinstance(tabuleiro.objslc, Aliado) or tabuleiro.objslc is None:
 									time = 'ali'
 								else:
 									time = 'ini'
 								membroiter['i'] = membroiter[time].index(tabuleiro.objslc)
-								membroiter['i'] += 1
-								if membroiter['i'] > len(membroiter[time]) - 1:
-									membroiter['i'] = 0
-								tabuleiro.objslc = membroiter[time][membroiter['i']]
+								if event.key == pygame.K_d:
+									membroiter['i'] += 1
+									if membroiter['i'] > len(membroiter[time]) - 1:
+										membroiter['i'] = 0
+									tabuleiro.objslc = membroiter[time][membroiter['i']]
+								else:  # event.key == pygame.K_a:
+									membroiter['i'] -= 1
+									if membroiter['i'] < 0:
+										membroiter['i'] = len(membroiter[time]) - 1
+									tabuleiro.objslc = membroiter[time][membroiter['i']]
+								tabuleiro.hoverobj()  # Mudar sprite do objeto selecionado para 'slc'
 
-						elif event.key == pygame.K_a:
-							if tabuleiro.objslc:
-								if isinstance(tabuleiro.objslc, Aliado):
-									time = 'ali'
-								else:
-									time = 'ini'
-								membroiter['i'] = membroiter[time].index(tabuleiro.objslc)
-								membroiter['i'] -= 1
-								if membroiter['i'] < 0:
-									membroiter['i'] = len(membroiter[time]) - 1
-								tabuleiro.objslc = membroiter[time][membroiter['i']]
+			if movimentar:
+				parar = movimentando.movimentar()
+				if parar:
+					movimentar = False
 
 			# Hover
 			if tabuleiro.mode_atual == 'def' or tabuleiro.mode_atual == 'slc':
-				tabuleiro.hoverobj()
+				if tabuleiro.hoverobj():
+					mousegroup.remove(mouse)  # Mouse some quando está sobre um personagem válido
+				else:
+					mousegroup.add(mouse)
 			elif tabuleiro.mode_atual == 'mov':
-				tabuleiro.hovertile()
+				if tabuleiro.hovertile():
+					mousegroup.remove(mouse)
+				else:
+					mousegroup.add(mouse)
 			elif tabuleiro.mode_atual == 'atk':
 				if isinstance(tabuleiro.objslc, Aliado):
 					alvo = tabuleiro.hoverobj('ini')
 				elif isinstance(tabuleiro.objslc, Inimigo):
 					alvo = tabuleiro.hoverobj('ali')
+				if alvo:
+					mousegroup.remove(mouse)
+				else:
+					mousegroup.add(mouse)
 
 			# Render
 			if renderalltiles:
@@ -236,27 +254,15 @@ def main():
 				pygame.draw.rect(screen, hud.botleftcont_fundo_cor, hud.botleftcont_fundo)
 				screen.blit(hud_botleft_surf, hud_botleft_rect)
 
-			# Health Bars
-			# for perso in tabuleiro.sptall:
-			# 	if perso.hb_show:
-			# 		pygame.draw.rect(tabuleiro.surf, (255, 0, 0), perso.hrect)
-			# 		pygame.draw.rect(tabuleiro.surf, (0, 0, 0), perso.hbbrect, 2)
-
 			# Mouse
 			mouse.rect.center = mouse_pos
-			screen.blit(mouse.image, mouse.rect)
+			mousegroup.draw(screen)
 
-			debug(f'screen.get_width(), screen.get_height() = {screen.get_width(), screen.get_height()}', y=170)
-			debug(f'mouse_pos = {mouse_pos}', y=190)
-			debug(f'offset = {offset}', y=210)
-			debug(f'tabuleiro.mousepos = {tabuleiro.mousepos}', y=230)
-			debug(f'tile do mouse = {tabuleiro.mousepos[0] // bloco_tam, tabuleiro.mousepos[1] // bloco_tam}', y=250)
-			debug(f'centro = {width // 2, height // 2}', y=270)
-			debug(f'tabuleiro x,y / centerx, centery {tabuleiro.rect.x, tabuleiro.rect.y, tabuleiro.rect.centerx, tabuleiro.rect.centery}', y=310)
-			debug(f'camera.zoom = {camera.zoom}', y=330)
-			debug(f'internal centro = {camera.internal_rect.centerx, camera.internal_rect.centery}', y=370)
-			debug(f'tabuleiro.sptchaoonscreen = {tabuleiro.sptchaoonscreen}', y=390)
-			debug(f'tabuleiro.sptchao = {tabuleiro.sptchao}', y=4100)
+			debug(f'mode_atual = {tabuleiro.mode_atual}')
+			debug(f'mouse_pos = {mouse_pos}', y=150)
+			debug(f'tabuleiro mousepos = {tabuleiro.mousepos}', y=170)
+			debug(f'tela centro = {width/2, height/2}', y=190)
+			debug(f'tabuleiro left, right, top, bottom = {tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom}', y=210)
 
 			pygame.display.update()
 			clock.tick(60)

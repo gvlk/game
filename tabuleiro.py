@@ -1,6 +1,7 @@
 import pygame
 from random import randint
 from math import sqrt
+from itertools import product  # DEBUG
 
 bloco_qnt = 5  # Mais 2 tiles externos de borda
 bloco_tam = 128
@@ -14,6 +15,13 @@ from camera import CameraGroup
 class Tabuleiro:
 	def gerargrade(self):
 		from bloco import Bloco
+		inds = set()  # DEBUG
+		ns = [i for i in range(1, bloco_qnt + 1)]  # DEBUG
+		cords = list(product(ns, repeat=2))  # DEBUG
+		for j in range(5):  # DEBUG
+			x = cords[randint(0, len(cords)-1)]  # DEBUG
+			cords.remove(x)  # DEBUG
+			inds.add(x)  # DEBUG
 		grade = list()
 		sptlist = list()
 		for c in range(0, bloco_qnt + 2):
@@ -25,7 +33,7 @@ class Tabuleiro:
 				if l == 0 or l == bloco_qnt + 1 or c == 0 or c == bloco_qnt + 1:
 					bloco.imgind()
 					bloco.ind = True
-				elif (l == 3 or l == 4) and (c == 3 or c == 4):
+				elif (l, c) in inds:
 					bloco.imgind()
 					bloco.ind = True
 				sptlist.append(bloco)
@@ -47,11 +55,12 @@ class Tabuleiro:
 		self.mousepos = (-1, -1)
 		self.objslc = None
 		self.grade = None
+		self.caminhoativo = tuple()
 		self.width = bloco_qnt * bloco_tam + (2 * bloco_tam)
 		self.height = self.width
 		self.surf = pygame.Surface((self.width, self.height))
 		self.surf.fill('Red')
-		self.camera_group = CameraGroup(self.surf)  # Working on it
+		self.camera_group = CameraGroup(self.surf)
 		self.rect = self.camera_group.tabuleiro_pos()
 		self.gerargrade()
 
@@ -82,6 +91,8 @@ class Tabuleiro:
 		"""
 		obj: Aliado | Inimigo
 		alvo: Aliado | Inimigo | None
+		hover: bool
+		hover = False
 		if not grupo:
 			grupo = self.sptall
 		elif grupo == 'ali':
@@ -89,16 +100,14 @@ class Tabuleiro:
 		elif grupo == 'ini':
 			grupo = self.sptinimigos
 		for obj in grupo:
-			pos_in_mask = self.mousepos[0] - obj.rect.x, self.mousepos[1] - obj.rect.y
 			if obj is not self.objslc:
-				try:
-					mask_touch = obj.mask.get_at(pos_in_mask)
-				except IndexError:
-					mask_touch = 0
-				if not mask_touch:
+				if not obj.bloco.rect.collidepoint(self.mousepos):
 					obj.imgdef()
+					obj.bloco.imgdef()
 				else:
 					obj.imgslc()
+					obj.bloco.imgmse()
+					hover = True
 					# Em 'atk', quando clica para atacar, o self.objslc não pode mudar
 					if self.mode_atual == 'def' or self.mode_atual == 'slc':
 						if click:
@@ -106,27 +115,41 @@ class Tabuleiro:
 					elif self.mode_atual == 'atk':
 						if obj is not self.objslc.mira:
 							self.objslc.mira = obj
-							self.objslc.rotate()
+							# self.objslc.rotate()
 						else:
 							return obj
 			else:
-				obj.imgslc()
+				if self.mode_atual != 'atk':
+					obj.imgslc()
+				else:
+					obj.imgatk()
+				obj.bloco.imgmse()
 
 		if not click:
-			return None
+			return hover
 		else:
 			return self.objslc
 
 	def hovertile(self):
 		"""
-		Muda as tiles sob o mouse para 'imgslc'
+		Muda as tiles sob o mouse
 		"""
 		tile: Bloco
+		hover: bool
+		hover = False
 		for tile in self.objslc.areamov:
-			if not tile.rect.collidepoint(self.mousepos):
+			if tile.rect.collidepoint(self.mousepos):
+				self.caminhoativo = self.objslc.caminhos[tile]
+				self.caminhoativo[-1].imgmovslc()
+				for tilecaminho in self.caminhoativo[:-1]:
+					tilecaminho.imgmov()
+				hover = True
+			if tile not in self.caminhoativo:
 				tile.imgdef()
-			else:
-				tile.imgslc()
+
+		if not hover:
+			self.caminhoativo = tuple()
+		return hover
 
 	def moverobj(self, obj: Aliado | Inimigo, pos_d: tuple = None) -> bool:
 		novobloco: Bloco
@@ -137,22 +160,35 @@ class Tabuleiro:
 			novobloco = self.grade[pos_d[0]][pos_d[1]]
 		except IndexError:  # Mouse fora do tabuleiro
 			return False
-		if novobloco in obj.areamov or not obj.pos:
+		if novobloco in obj.areamov or (not obj.pos and not novobloco.conteudo and not novobloco.ind):
+			print(f'POSIÇÃO {pos_d} ACEITA')
+
 			pos_a = obj.pos  # Posição atual será usada para limpar o render depois
-			if pos_a:
+			if pos_a:  # Se não tiver posição atual significa ser a primeira adição do personagem no tabuleiro
 				atualbloco = self.grade[pos_a[0]][pos_a[1]]
+				atualbloco.imgdef()
 				atualbloco.conteudo = None
+				obj.pos = pos_d
+				obj.bloco = novobloco
+				obj.update(movimentar=True, blocodestino=novobloco)
 			else:
-				pos_a = None
+				obj.pos = pos_d
+				obj.bloco = novobloco
+				obj.update()
+
 			novobloco.conteudo = obj
-			novobloco.imgdef()
-			obj.pos = pos_d
-			obj.bloco = novobloco
-			obj.update()
+			self.resettiles(obj.areamov)  # Mudar todos tiles da área de movimento para 'def'
 			self.gerarmov(obj, pos_a)
+			print('PASSOU PELO GERAR MOV\n')
 			self.renderchao(obj, pos_a)
 			self.removermira(obj)
 			self.objslc = None
+			for perso in self.sptall:  # DEBUG
+				print(perso.nome)  # DEBUG
+				for caminho in perso.caminhos.values():  # DEBUG
+					for tile in caminho:  # DEBUG
+						print((tile.rect.x // 128, tile.rect.y // 128), end=' ')  # DEBUG
+					print()  # DEBUG
 			return True  # Movimento realizado
 		else:
 			return False  # Tile fora do range do personagem ou ocupado
@@ -165,6 +201,7 @@ class Tabuleiro:
 		obj: Aliado | Inimigo
 		obj2: Aliado | Inimigo
 		obj.areamov.clear()  # Ao invés de começar do zero sempre, pode haver alguma forma de otimização
+		obj.caminhos.clear()
 		obj_posx, obj_posy = obj.pos
 		for x in range(obj_posx - obj.spd, obj_posx + obj.spd + 1):
 			if x < 1:
@@ -180,15 +217,38 @@ class Tabuleiro:
 				if 0 < dis <= obj.spd:
 					tile = self.grade[x][y]
 					if not tile.conteudo and not tile.ind:
-						obj.areamov.add(tile)
-			# if self.findpath(obj.pos, (x, y)):
-			# 	pass
+						print(f'PATHFINDING DE {obj.pos} PARA {(x, y)}')
+						caminho = self.findpath(obj.pos, (x, y))
+						if caminho is not None and len(caminho) <= obj.spd:
+							print(f'\033[32mPATHFINDING PARA {(x, y)} ACEITO\033[0m')
+							obj.caminhos[tile] = caminho
+							obj.areamov.add(tile)
 
 		for obj2 in self.sptall:
-			if obj.bloco in obj2.areamov:  # Remover o novo bloco do range dos outros personagens
-				obj2.areamov.remove(obj.bloco)
-			if self.inobjmov(obj2, pos_a):
-				obj2.areamov.add(self.grade[pos_a[0]][pos_a[1]])
+			if obj2 is not obj:
+				if obj.bloco in obj2.areamov:  # Remover o novo bloco do range dos outros personagens
+					obj2.areamov.remove(obj.bloco)
+					del obj2.caminhos[obj.bloco]
+					delitems = list()
+					for destino, caminho in obj2.caminhos.items():  # Remover o novo bloco dos caminhos já descobertos
+						if obj.bloco in caminho:
+							tiledestino = (destino.rect.x // bloco_tam, destino.rect.y // bloco_tam)
+							novocaminho = self.findpath(obj2.pos, tiledestino)
+							if novocaminho is not None and len(novocaminho) <= obj2.spd:  # Tentar achar outro caminho
+								obj2.caminhos[destino] = novocaminho
+							else:
+								obj2.areamov.remove(destino)
+								delitems.append(destino)  # Não pode apagar um item de dicionário no meio da iteração
+					for i in delitems:
+						del obj2.caminhos[i]
+
+				# Adicionar o bloco do qual saiu ao range dos outros personagens se possível
+				if self.inobjmov(obj2, pos_a):
+					caminho = self.findpath(obj2.pos, pos_a)
+					if caminho is not None and len(caminho) <= obj2.spd:
+						tile = self.grade[pos_a[0]][pos_a[1]]
+						obj2.caminhos[tile] = caminho
+						obj2.areamov.add(tile)
 
 	def findpath(self, origem: tuple, destino: tuple):
 		tile: Bloco
@@ -197,6 +257,7 @@ class Tabuleiro:
 		opentiles = list()
 		closedtiles = list()
 		ngbrs = list()
+		limpar = list()  # Lista de tiles que devem ser limpos no final. tile.parent = None
 		origembloco = self.grade[origem[0]][origem[1]]
 		origemx, origemy = origembloco.rect.center
 		destinobloco = self.grade[destino[0]][destino[1]]
@@ -206,7 +267,11 @@ class Tabuleiro:
 
 		while True:
 			iteracoes += 1
-			bloco = opentiles[0]
+			opentiles = sorted(opentiles, key=lambda x: x[0].fcost)
+			try:
+				bloco = opentiles[0]
+			except IndexError:
+				return None
 			tile = bloco[0]
 			cordx, cordy = bloco[1]
 			opentiles.remove(bloco)
@@ -230,27 +295,30 @@ class Tabuleiro:
 					sqrt(((destinox - vizinho.rect.center[0]) ** 2) + ((destinoy - vizinho.rect.center[1]) ** 2)))
 				vizinho.fcost = vizinho.gcost + vizinho.hcost
 				vizinho.parent = tile
+				limpar.append(vizinho)
 				opentiles.append(bloco)
-				opentiles = sorted(opentiles, key=lambda x: x[0].fcost)
 			else:
 				ngbrs.clear()
 		aux: Bloco
 		aux = destinobloco
+		# TODO: esse while ta dando problema. loop infinito quando o .parent do tile A é o tile B e o .parent do tile
+		#  B é o tile A
 		while aux.parent:
+			print(f'{(aux.rect.x // 128, aux.rect.y // 128)} adicionado ao caminho')  # DEBUG
 			caminho.append(aux)
 			aux = aux.parent
 		caminho.reverse()
-		caminho = tuple(caminho)
-		print(iteracoes)
-		for x in caminho:
-			print(x.rect.top // 64, x.rect.left // 64)
+		for tile in limpar:  # Limpar as tiles usadas para descobrir o caminho
+			tile.parent = None
+		# print(f'iterações pathfinding = {iteracoes}, origem = {origem}, destino = {destino}, tamanho = {len(caminho)}')
+		return tuple(caminho)
 
 	@staticmethod
 	def inobjmov(obj: Aliado | Inimigo, pos: tuple) -> bool:
 		if pos:
 			posx, posy = pos
 			dis = abs(posx - obj.pos[0]) + abs(posy - obj.pos[1])
-			if 0 < dis < obj.spd:
+			if 0 < dis <= obj.spd:
 				return True
 			else:
 				return False
@@ -302,18 +370,34 @@ class Tabuleiro:
 					self.sptchaoonscreen.add(bloco)
 		self.camera_group.ground = self.sptchaoonscreen
 
-	def resettile(self):
+	def resettiles(self, grupo=None):
 		"""
 		Tile sob o mouse retorna para 'imgdef'
 		"""
 		tile: Bloco
-		try:
-			tile = self.grade[int(self.mousepos[0] // bloco_tam)][int(self.mousepos[1] // bloco_tam)]
-		except IndexError:
-			pass  # Mouse está fora do tabuleiro
+		if not grupo:
+			try:
+				tile = self.grade[int(self.mousepos[0] // bloco_tam)][int(self.mousepos[1] // bloco_tam)]
+			except IndexError:
+				pass  # Mouse está fora do tabuleiro
+			else:
+				if not tile.ind:
+					tile.imgdef()
 		else:
-			if not tile.ind:
+			for tile in grupo:
 				tile.imgdef()
+
+	def tileocupada(self):
+		tile: Bloco
+		try:
+			tile = self.grade[int(self.mousepos[0]) // bloco_tam][int(self.mousepos[1]) // bloco_tam]
+		except IndexError:
+			return False  # Mouse está fora do tabuleiro
+		else:
+			if tile.conteudo is None:
+				return False
+			else:
+				return True
 
 	def resetobj(self, obj: Aliado | Inimigo = None, limparslc: bool = False, img: str = 'def', rot: bool = False):
 		if not obj:
@@ -321,6 +405,8 @@ class Tabuleiro:
 				obj = self.objslc
 			else:
 				return None  # Não há objeto para resetar
+		else:
+			obj.bloco.imgdef()
 		obj.update(img=img, rot=rot)
 		if limparslc:
 			self.objslc = None

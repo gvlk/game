@@ -8,9 +8,12 @@ class Aliado(pygame.sprite.Sprite):
 		imgdef = pygame.image.load('graphics/aliados/aliado.png')
 		imgslc = pygame.image.load('graphics/aliados/aliado_slc.png')
 		imgatk = pygame.image.load('graphics/aliados/aliado_atk.png')
+		sombra = pygame.image.load('graphics/detalhes/sombra1.png')
 		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
 		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
 		imgatk = pygame.transform.scale(imgatk, pygame.math.Vector2(imgatk.get_size()) * 4).convert_alpha()
+		self.sombra_surf = pygame.transform.scale(sombra, pygame.math.Vector2(sombra.get_size()) * 4).convert_alpha()
+		self.sombra_rect = self.sombra_surf.get_rect()
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
 		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
@@ -27,24 +30,35 @@ class Aliado(pygame.sprite.Sprite):
 		self.maximum_health = 8
 		self.health_bar_length = 10
 		self.health_ratio = self.maximum_health / self.health_bar_length
-		self.hb_show = True
-		self.hb_pos = None
-		self.hb_xy = None
-		self.hrect = None
-		self.hbbrect = None
-		self.spd = 7
+		self.hb_show = False
+		self.hb_size = (10, (self.current_health / self.health_ratio) * 5)  # Barra vermelha
+		self.hb_pos = (self.rect.x, self.rect.y)
+		self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
+		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length, self.hb_size[1]))  # Borda preta
+		self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
+		self.spd = 3
 		self.areamov = set()
+		self.caminhos = dict()  # Dicionário destino: caminho
+		self.caminhoativo = list()
+		self.xprox = int()
+		self.yprox = int()
+		self.velmov = 4
 
-	def update(self, img: str = 'def', rot: bool = True):
+	def update(self, img: str = 'def', rot: bool = True, movimentar=False, blocodestino=None):
 		"""
 		Atualizar a posição do sprite para o bloco atual entre outras coisas
 		"""
 		self.imgf[img]()
-		self.rect = self.image.get_rect(midbottom=(self.bloco.rect.midbottom))
-		self.hb_xy = ((self.current_health / self.health_ratio) * 5, 10)
-		self.hb_pos = (self.rect.x + 7, self.rect.y - self.hb_xy[1])
-		self.hrect = pygame.Rect(self.hb_pos, self.hb_xy)
-		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length * 5, self.hb_xy[1]))
+		if movimentar:
+			self.movimentar(blocodestino)
+		else:
+			self.rect = self.image.get_rect(midbottom=self.bloco.rect.midbottom)
+			self.sombra_rect = self.sombra_surf.get_rect(midbottom=self.bloco.rect.midbottom)
+			self.hb_size = (10, (self.current_health / self.health_ratio) * 5)  # Barra vermelha
+			self.hb_pos = (self.rect.x + self.rect.w - 20, self.rect.y + self.rect.h - 70)
+			self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
+			self.hbbrect = pygame.Rect(self.hb_pos, self.hbbrect.size)  # Borda preta
+			self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
 		self.mira = None
 		if rot:
 			self.miraangulos.clear()
@@ -81,6 +95,42 @@ class Aliado(pygame.sprite.Sprite):
 		if self.mira.current_health < self.mira.maximum_health:
 			self.mira.hb_show = True
 		self.mira.update()
+
+	def movimentar(self, blocodestino=None):
+		vetor = pygame.math.Vector2()
+		if blocodestino:
+			self.caminhoativo = list(self.caminhos[blocodestino])
+		else:
+			self.xprox = self.caminhoativo[0].rect.midbottom[0]
+			self.yprox = self.caminhoativo[0].rect.midbottom[1]
+
+			if self.rect.midbottom[0] - self.velmov > self.xprox:
+				vetor.x = self.rect.midbottom[0] - self.velmov
+			elif self.rect.midbottom[0] + self.velmov < self.xprox:
+				vetor.x = self.rect.midbottom[0] + self.velmov
+			else:
+				vetor.x = self.xprox
+			if self.rect.midbottom[1] - self.velmov > self.yprox:
+				vetor.y = self.rect.midbottom[1] - self.velmov
+			elif self.rect.midbottom[1] + self.velmov < self.yprox:
+				vetor.y = self.rect.midbottom[1] + self.velmov
+			else:
+				vetor.y = self.yprox
+
+			if vetor == self.bloco.rect.midbottom:
+				self.update()
+				return True
+			elif vetor == (self.xprox, self.yprox):
+				self.caminhoativo.pop(0)
+
+			print(vetor, self.bloco.rect.midbottom, self.caminhoativo)
+
+			self.rect = self.image.get_rect(midbottom=vetor)
+			self.sombra_rect = self.sombra_surf.get_rect(midbottom=vetor)
+			self.hb_pos = (self.rect.x + self.rect.w - 20, self.rect.y + self.rect.h - 70)
+			self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
+			self.hbbrect = pygame.Rect(self.hb_pos, self.hbbrect.size)  # Borda preta
+			self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
 
 	def rotate(self):
 		if self.mira in self.miraangulos:
@@ -110,9 +160,12 @@ class Inimigo(pygame.sprite.Sprite):
 		imgdef = pygame.image.load('graphics/inimigos/inimigo.png')
 		imgslc = pygame.image.load('graphics/inimigos/inimigo_slc.png')
 		imgatk = pygame.image.load('graphics/inimigos/inimigo_atk.png')
+		sombra = pygame.image.load('graphics/detalhes/sombra1.png')
 		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
 		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
 		imgatk = pygame.transform.scale(imgatk, pygame.math.Vector2(imgatk.get_size()) * 4).convert_alpha()
+		self.sombra_surf = pygame.transform.scale(sombra, pygame.math.Vector2(sombra.get_size()) * 4).convert_alpha()
+		self.sombra_rect = self.sombra_surf.get_rect()
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
 		self.imgf = {'def': self.imgdef, 'slc': self.imgslc, 'atk': self.imgatk}
 		self.imgatual = 'def'
@@ -129,24 +182,35 @@ class Inimigo(pygame.sprite.Sprite):
 		self.maximum_health = 8
 		self.health_bar_length = 10
 		self.health_ratio = self.maximum_health / self.health_bar_length
-		self.hb_show = True
-		self.hb_pos = None
-		self.hb_xy = None
-		self.hrect = None
-		self.hbbrect = None
+		self.hb_show = False
+		self.hb_size = (10, (self.current_health / self.health_ratio) * 5)  # Barra vermelha
+		self.hb_pos = (self.rect.x, self.rect.y)
+		self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
+		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length, self.hb_size[1]))  # Borda preta
+		self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
 		self.spd = 3
 		self.areamov = set()
+		self.caminhos = dict()
+		self.caminhoativo = list()
+		self.xprox = int()
+		self.yprox = int()
+		self.velmov = 4
 
-	def update(self, img: str = 'def', rot: bool = True):
+	def update(self, img: str = 'def', rot: bool = True, movimentar=False, blocodestino=None):
 		"""
 		Atualizar a posição do sprite para o bloco atual entre outras coisas
 		"""
 		self.imgf[img]()
-		self.rect = self.image.get_rect(midbottom=self.bloco.rect.midbottom)
-		self.hb_xy = ((self.current_health / self.health_ratio) * 5, 10)
-		self.hb_pos = (self.rect.x + 7, self.rect.y - self.hb_xy[1])
-		self.hrect = pygame.Rect(self.hb_pos, self.hb_xy)
-		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length * 5, self.hb_xy[1]))
+		if movimentar:
+			self.movimentar(blocodestino)
+		else:
+			self.rect = self.image.get_rect(midbottom=self.bloco.rect.midbottom)
+			self.sombra_rect = self.sombra_surf.get_rect(midbottom=self.bloco.rect.midbottom)
+			self.hb_size = (10, (self.current_health / self.health_ratio) * 5)  # Barra vermelha
+			self.hb_pos = (self.rect.x + self.rect.w - 20, self.rect.y + self.rect.h - 70)
+			self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
+			self.hbbrect = pygame.Rect(self.hb_pos, self.hbbrect.size)  # Borda preta
+			self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
 		self.mira = None
 		if rot:
 			self.miraangulos.clear()
@@ -183,6 +247,42 @@ class Inimigo(pygame.sprite.Sprite):
 		if self.mira.current_health < self.mira.maximum_health:
 			self.mira.hb_show = True
 		self.mira.update()
+
+	def movimentar(self, blocodestino=None):
+		vetor = pygame.math.Vector2()
+		if blocodestino:
+			self.caminhoativo = list(self.caminhos[blocodestino])
+		else:
+			self.xprox = self.caminhoativo[0].rect.midbottom[0]
+			self.yprox = self.caminhoativo[0].rect.midbottom[1]
+
+			if self.rect.midbottom[0] - self.velmov > self.xprox:
+				vetor.x = self.rect.midbottom[0] - self.velmov
+			elif self.rect.midbottom[0] + self.velmov < self.xprox:
+				vetor.x = self.rect.midbottom[0] + self.velmov
+			else:
+				vetor.x = self.xprox
+			if self.rect.midbottom[1] - self.velmov > self.yprox:
+				vetor.y = self.rect.midbottom[1] - self.velmov
+			elif self.rect.midbottom[1] + self.velmov < self.yprox:
+				vetor.y = self.rect.midbottom[1] + self.velmov
+			else:
+				vetor.y = self.yprox
+
+			if vetor == self.bloco.rect.midbottom:
+				self.update()
+				return True
+			elif vetor == (self.xprox, self.yprox):
+				self.caminhoativo.pop(0)
+
+			print(vetor, self.bloco.rect.midbottom, self.caminhoativo)
+
+			self.rect = self.image.get_rect(midbottom=vetor)
+			self.sombra_rect = self.sombra_surf.get_rect(midbottom=vetor)
+			self.hb_pos = (self.rect.x + self.rect.w - 20, self.rect.y + self.rect.h - 70)
+			self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
+			self.hbbrect = pygame.Rect(self.hb_pos, self.hbbrect.size)  # Borda preta
+			self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
 
 	def rotate(self):
 		if self.mira in self.miraangulos:
