@@ -40,6 +40,7 @@ class Aliado(pygame.sprite.Sprite):
 		self.areamov = set()
 		self.caminhos = dict()  # Dicionário destino: caminho
 		self.caminhoativo = list()
+		self.caminhosind = dict()
 		self.xprox = int()
 		self.yprox = int()
 		self.velmov = 4
@@ -122,8 +123,6 @@ class Aliado(pygame.sprite.Sprite):
 				return True
 			elif vetor == (self.xprox, self.yprox):
 				self.caminhoativo.pop(0)
-
-			print(vetor, self.bloco.rect.midbottom, self.caminhoativo)
 
 			self.rect = self.image.get_rect(midbottom=vetor)
 			self.sombra_rect = self.sombra_surf.get_rect(midbottom=vetor)
@@ -192,6 +191,7 @@ class Inimigo(pygame.sprite.Sprite):
 		self.areamov = set()
 		self.caminhos = dict()
 		self.caminhoativo = list()
+		self.caminhosind = dict()
 		self.xprox = int()
 		self.yprox = int()
 		self.velmov = 4
@@ -274,8 +274,6 @@ class Inimigo(pygame.sprite.Sprite):
 				return True
 			elif vetor == (self.xprox, self.yprox):
 				self.caminhoativo.pop(0)
-
-			print(vetor, self.bloco.rect.midbottom, self.caminhoativo)
 
 			self.rect = self.image.get_rect(midbottom=vetor)
 			self.sombra_rect = self.sombra_surf.get_rect(midbottom=vetor)

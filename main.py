@@ -261,8 +261,7 @@ def main():
 			debug(f'mode_atual = {tabuleiro.mode_atual}')
 			debug(f'mouse_pos = {mouse_pos}', y=150)
 			debug(f'tabuleiro mousepos = {tabuleiro.mousepos}', y=170)
-			debug(f'tela centro = {width/2, height/2}', y=190)
-			debug(f'tabuleiro left, right, top, bottom = {tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom}', y=210)
+			debug(f'tile atual = {tabuleiro.mousepos[0] // 128, tabuleiro.mousepos[1] // 128}', y=190)
 
 			pygame.display.update()
 			clock.tick(60)

@@ -179,7 +179,7 @@ class Tabuleiro:
 			novobloco.conteudo = obj
 			self.resettiles(obj.areamov)  # Mudar todos tiles da área de movimento para 'def'
 			self.gerarmov(obj, pos_a)
-			print('PASSOU PELO GERAR MOV\n')
+			print('\033[32mGERAR MOVIMENTO TERMINADO\033[m\n')
 			self.renderchao(obj, pos_a)
 			self.removermira(obj)
 			self.objslc = None
@@ -193,6 +193,8 @@ class Tabuleiro:
 		else:
 			return False  # Tile fora do range do personagem ou ocupado
 
+	# Erro: o tile inicial não é adicionado aos caminhos indisponíveis então fica invisível para os outros personagens
+	# até que esse outro personagem se movimente e o tile entre em seu range
 	def gerarmov(self, obj: Aliado | Inimigo, pos_a: tuple):
 		"""
 		Gera o range de tiles para o qual o membro pode se movimentar.
@@ -220,35 +222,69 @@ class Tabuleiro:
 						print(f'PATHFINDING DE {obj.pos} PARA {(x, y)}')
 						caminho = self.findpath(obj.pos, (x, y))
 						if caminho is not None and len(caminho) <= obj.spd:
-							print(f'\033[32mPATHFINDING PARA {(x, y)} ACEITO\033[0m')
+							print(f'\033[32mPATHFINDING PARA {(x, y)} ACEITO\033[0m')  # DEBUG
 							obj.caminhos[tile] = caminho
 							obj.areamov.add(tile)
+						else:
+							print(f'\033[31mPATHFINDING PARA {(x, y)} NEGADO\033[0m')  # DEBUG
 
 		for obj2 in self.sptall:
 			if obj2 is not obj:
+
+				delitems = list()
 				if obj.bloco in obj2.areamov:  # Remover o novo bloco do range dos outros personagens
 					obj2.areamov.remove(obj.bloco)
+					print(f'\033[31mTILE {(obj.bloco.rect.x//128, obj.bloco.rect.y//128)} REMOVIDO DE {obj2.nome}\033[0m')  # DEBUG
 					del obj2.caminhos[obj.bloco]
-					delitems = list()
 					for destino, caminho in obj2.caminhos.items():  # Remover o novo bloco dos caminhos já descobertos
 						if obj.bloco in caminho:
 							tiledestino = (destino.rect.x // bloco_tam, destino.rect.y // bloco_tam)
+							print(f'\033[33mBUSCANDO CAMINHO ALTERNATIVO DE {obj2.nome} PARA {tiledestino}\033[0m')  # DEBUG
 							novocaminho = self.findpath(obj2.pos, tiledestino)
 							if novocaminho is not None and len(novocaminho) <= obj2.spd:  # Tentar achar outro caminho
+								print(f'\033[32mCAMINHO ALTERNATIVO {obj2.nome} PARA {tiledestino} ENCONTRADO\033[0m')  # DEBUG
 								obj2.caminhos[destino] = novocaminho
 							else:
+								print(f'\033[31mCAMINHO ALTERNATIVO {obj2.nome} PARA {tiledestino} NÃO ENCONTRADO, ADICIONADO A CAMINHOS INDISPONÍVEIS\033[0m')  # DEBUG
 								obj2.areamov.remove(destino)
-								delitems.append(destino)  # Não pode apagar um item de dicionário no meio da iteração
+								obj2.caminhosind[destino] = caminho  # Joga esse caminho para os caminhos indisponíveis
+								delitems.append(destino)  # Impossível deletar um item de dicionário no meio da iteração
 					for i in delitems:
 						del obj2.caminhos[i]
+					delitems.clear()
 
 				# Adicionar o bloco do qual saiu ao range dos outros personagens se possível
 				if self.inobjmov(obj2, pos_a):
+					print(f'\033[34mBUSCANDO CAMINHO DE {obj2.nome} PARA {(pos_a)}\033[0m')  # DEBUG
 					caminho = self.findpath(obj2.pos, pos_a)
 					if caminho is not None and len(caminho) <= obj2.spd:
+						print(f'\033[32mTILE {(pos_a)} ADICIONADO A {obj2.nome}\033[0m')  # DEBUG
 						tile = self.grade[pos_a[0]][pos_a[1]]
 						obj2.caminhos[tile] = caminho
 						obj2.areamov.add(tile)
+					else:
+						print(
+							f'\033[31mTILE {(pos_a)} FORA DO ALCANCE DE {obj2.nome}\033[0m')  # DEBUG
+
+				# Testar se algum caminho de outro personagem ficou disponível
+				for destino, caminho in obj2.caminhosind.items():
+					if obj.bloco is not destino and obj.bloco not in caminho:
+						tiledestino = (destino.rect.x // bloco_tam, destino.rect.y // bloco_tam)
+						if self.inobjmov(obj2, tiledestino):
+							caminho = self.findpath(obj2.pos, tiledestino)
+							if caminho is not None and len(caminho) <= obj2.spd:
+								print(f'\033[32mCAMINHO DE {obj2.nome} PARA {tiledestino} ENCONTRADO\033[0m')  # DEBUG
+								obj2.caminhos[destino] = caminho
+								obj2.areamov.add(destino)
+								delitems.append(destino)
+						else:
+							print(f'\033[31mCAMINHO DE {obj2.nome} PARA {tiledestino} FORA DE ALCANCE, APAGADO\033[0m')  # DEBUG
+							delitems.append(destino)
+				for i in delitems:
+					del obj2.caminhosind[i]
+				delitems.clear()
+
+
 
 	def findpath(self, origem: tuple, destino: tuple):
 		tile: Bloco
@@ -258,6 +294,7 @@ class Tabuleiro:
 		closedtiles = list()
 		ngbrs = list()
 		limpar = list()  # Lista de tiles que devem ser limpos no final. tile.parent = None
+		caminhoencontrado = False
 		origembloco = self.grade[origem[0]][origem[1]]
 		origemx, origemy = origembloco.rect.center
 		destinobloco = self.grade[destino[0]][destino[1]]
@@ -270,13 +307,14 @@ class Tabuleiro:
 			opentiles = sorted(opentiles, key=lambda x: x[0].fcost)
 			try:
 				bloco = opentiles[0]
-			except IndexError:
-				return None
+			except IndexError:  # Acabaram as possibilidades de movimento
+				break
 			tile = bloco[0]
 			cordx, cordy = bloco[1]
 			opentiles.remove(bloco)
 			closedtiles.append(bloco)
 			if tile is destinobloco:  # Achou um caminho
+				caminhoencontrado = True
 				break
 
 			ngbrs.append((self.grade[cordx + 1][cordy], (cordx + 1, cordy)))
@@ -299,19 +337,22 @@ class Tabuleiro:
 				opentiles.append(bloco)
 			else:
 				ngbrs.clear()
-		aux: Bloco
-		aux = destinobloco
-		# TODO: esse while ta dando problema. loop infinito quando o .parent do tile A é o tile B e o .parent do tile
-		#  B é o tile A
-		while aux.parent:
-			print(f'{(aux.rect.x // 128, aux.rect.y // 128)} adicionado ao caminho')  # DEBUG
-			caminho.append(aux)
-			aux = aux.parent
-		caminho.reverse()
+
+		if caminhoencontrado:
+			aux: Bloco
+			aux = destinobloco
+			while aux.parent:
+				caminho.append(aux)
+				aux = aux.parent
+			caminho.reverse()
+
 		for tile in limpar:  # Limpar as tiles usadas para descobrir o caminho
 			tile.parent = None
-		# print(f'iterações pathfinding = {iteracoes}, origem = {origem}, destino = {destino}, tamanho = {len(caminho)}')
-		return tuple(caminho)
+
+		if caminhoencontrado:
+			return tuple(caminho)
+		else:
+			return None
 
 	@staticmethod
 	def inobjmov(obj: Aliado | Inimigo, pos: tuple) -> bool:
