@@ -4,7 +4,7 @@ import pygame.freetype
 from main import s_res, font
 s_w, s_h = s_res
 
-from personagem import Aliado, Inimigo
+from personagem import Soldado
 
 
 class Hud:

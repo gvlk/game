@@ -1,6 +1,6 @@
 import pygame
 from main import s_res
-from personagem import Aliado, Inimigo
+from personagem import Soldado
 
 
 class CameraGroup(pygame.sprite.Group):
@@ -16,11 +16,11 @@ class CameraGroup(pygame.sprite.Group):
 			'top': 100,
 			'bottom': 100
 		}
-		l = self.camera_border['left']
-		t = self.camera_border['top']
-		w = s_res[0] - (self.camera_border['left'] + self.camera_border['right'])
-		h = s_res[1] - (self.camera_border['top'] + self.camera_border['bottom'])
-		self.camera_rect = pygame.Rect(l, t, w, h)
+		lb = self.camera_border['left']
+		tb = self.camera_border['top']
+		wb = s_res[0] - (self.camera_border['left'] + self.camera_border['right'])
+		hb = s_res[1] - (self.camera_border['top'] + self.camera_border['bottom'])
+		self.camera_rect = pygame.Rect(lb, tb, wb, hb)
 		self.keyboard_speed = 15
 		self.mouse_speed = 0.4
 		self.zoom = 1
@@ -42,7 +42,7 @@ class CameraGroup(pygame.sprite.Group):
 	def mouse_control(self, left, right, top, bottom, mouse):
 		mouse = pygame.math.Vector2(mouse)
 		mouse_offset = pygame.math.Vector2()
-		limite = self.internal_surf_size[0]/2
+		limite = self.internal_surf_size[0] / 2
 		if left < limite:
 			left_border = self.camera_border['left']
 		else:
@@ -92,7 +92,7 @@ class CameraGroup(pygame.sprite.Group):
 		self.offset -= mouse_offset * self.mouse_speed
 
 	def keyboard_control(self, left, right, top, bottom):
-		limite = self.internal_surf_size[0]/2
+		limite = self.internal_surf_size[0] / 2
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_LEFT]:
 			if left < limite:
@@ -112,7 +112,7 @@ class CameraGroup(pygame.sprite.Group):
 		return self.surface.get_rect(center=offset_pos)
 
 	def drawsprites(self, tabuleiro, mouse):
-		sprite: Aliado | Inimigo
+		sprite: Soldado
 		self.mouse_control(tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom, mouse)
 		self.keyboard_control(tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom)
 
@@ -124,7 +124,7 @@ class CameraGroup(pygame.sprite.Group):
 			offset_pos = sprite.rect.topleft
 			self.surface.blit(sprite.image, offset_pos)
 
-		for sprite in sorted(self.sprites(), key=lambda sprite: sprite.rect.centery):
+		for sprite in sorted(self.sprites(), key=lambda spr: spr.rect.centery):
 			self.surface.blit(sprite.sombra_surf, sprite.sombra_rect)
 			offset_pos = sprite.rect.topleft
 			self.surface.blit(sprite.image, offset_pos)
@@ -134,5 +134,5 @@ class CameraGroup(pygame.sprite.Group):
 
 		self.internal_surf.blit(tabuleiro.surf, tabuleiro.rect)
 
-		# self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
-		# self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))
+	# self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
+	# self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))

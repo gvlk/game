@@ -56,6 +56,3 @@ class Bloco(pygame.sprite.Sprite):
 		if self.imgatual != 'movslc':
 			self.imgatual = 'movslc'
 			self.image = self.imgs[self.imgatual]
-
-
-
