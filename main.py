@@ -37,14 +37,12 @@ class Mouse(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 
 
-def gerartimes(tabuleiro, bloco_qnt, n: int = 2):
+def gerartimes(tabuleiro, bloco_qnt, n: int = 1):
 	for i in range(0, 2 * n):
 		if i % 2 == 0:
 			membro = tabuleiro.add('ali')
-			print()
 		else:
 			membro = tabuleiro.add('ini')
-			print()
 		while True:
 			if tabuleiro.moverobj(membro, (randint(1, bloco_qnt), randint(1, bloco_qnt))):
 				break
@@ -76,13 +74,11 @@ def main():
 
 	def execjogo():
 		global screen
-		# Constantes para descobrir a posição do mouse relativa ao tabuleiro
 		perso: Aliado | Inimigo
 		alvo: Aliado | Inimigo | None
 		movimentando: Aliado | Inimigo | None
 		mouse_pos = pygame.math.Vector2()
 		offset = pygame.math.Vector2()
-		renderalltiles = False  # Primeiramente renderizar todos tiles
 		alvo = None
 		movimentar = False
 		movimentando = None
@@ -91,6 +87,7 @@ def main():
 			'ali': list(tabuleiro.sptaliados),
 			'ini': list(tabuleiro.sptinimigos)
 		}
+		tabuleiro.sptchao.draw(tabuleiro.surf)  # Primeiramente renderizar todos tiles
 
 		while True:
 			for event in pygame.event.get():
@@ -113,7 +110,7 @@ def main():
 				elif event.type == pygame.MOUSEBUTTONDOWN:
 					if event.button == 1:
 
-						if tabuleiro.mode_atual != 'def':
+						if tabuleiro.mode_atual != 'def':  # HUD
 							menuitem = hud.mouseslc(mouse_pos)
 							if menuitem:  # Primeiro checar se o menu foi clicado
 								tabuleiro.resettiles()
@@ -139,7 +136,7 @@ def main():
 
 						elif tabuleiro.mode_atual == 'atk':
 							if alvo:
-								tabuleiro.ataque(defensor=alvo, valor=1)
+								tabuleiro.ataque(defensor=alvo)
 								tabuleiro.mode_atual = 'def'
 
 				elif event.type == pygame.MOUSEBUTTONUP:
@@ -176,6 +173,7 @@ def main():
 
 						elif event.key == pygame.K_w:
 							if tabuleiro.mode_atual != 'atk':
+								tabuleiro.gerarchances()
 								tabuleiro.resettiles(tabuleiro.objslc.areamov)  # Resetar os blocos da área de movimento
 								tabuleiro.objslc.imgatk()
 								tabuleiro.mode_atual = 'atk'
@@ -231,11 +229,7 @@ def main():
 					mousegroup.add(mouse)
 
 			# Render
-			if renderalltiles:
-				renderalltiles = False
-				tabuleiro.sptchao.draw(tabuleiro.surf)
 
-			screen.fill('Grey')
 			camera.drawsprites(tabuleiro, mouse_pos)
 			offset = getmouseoffset(
 				tabuleiro.rect.x, tabuleiro.rect.y,
@@ -245,23 +239,15 @@ def main():
 			# screen.blit(camera.scaled_surf, camera.scaled_rect)  # Zoom Desligado
 			screen.blit(camera.internal_surf, camera.internal_rect)
 
-			if tabuleiro.mode_atual != 'def':  # 'slc', 'mov', 'atk'
-				screen.blit(hud.hsurf, hud.hrect)
-				hud.hsurf.blit(hud.csurf, hud.crect)
-				hud.sptmenu.draw(screen)
-				hud.mouseslc(mouse_pos)
-				hud_botleft_surf, hud_botleft_rect = hud.bottomleftcontainer(tabuleiro.objslc)
-				pygame.draw.rect(screen, hud.botleftcont_fundo_cor, hud.botleftcont_fundo)
-				screen.blit(hud_botleft_surf, hud_botleft_rect)
-
 			# Mouse
 			mouse.rect.center = mouse_pos
 			mousegroup.draw(screen)
 
-			debug(f'mode_atual = {tabuleiro.mode_atual}')
+			debug(f'FPS {int(clock.get_fps())}')
 			debug(f'mouse_pos = {mouse_pos}', y=150)
 			debug(f'tabuleiro mousepos = {tabuleiro.mousepos}', y=170)
 			debug(f'tile atual = {tabuleiro.mousepos[0] // 128, tabuleiro.mousepos[1] // 128}', y=190)
+			debug(f'Tiles sendo atualizados = {tabuleiro.sptchaoonscreen}', y=210)
 
 			pygame.display.update()
 			clock.tick(60)

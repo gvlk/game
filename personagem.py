@@ -1,5 +1,6 @@
 import pygame
-from math import atan2, degrees, radians
+from math import atan2, degrees, radians, log10
+from random import randint
 
 
 class Aliado(pygame.sprite.Sprite):
@@ -22,21 +23,26 @@ class Aliado(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.pos = pos
 		self.nome = nome
+		self.atr = {  # Atributos do personagem
+			'mhp': 8,
+			'spd': 3,
+			'dmg': (1, 3),  # Dano mínimo e máximo
+			'acc': 3,
+			'crt': 3  # Porcentagem de acerto crítico
+		}
 		self.bloco = None
 		self.mira: Aliado | Inimigo | None = None
 		self.miraangulos = dict()
 		self.area = pygame.sprite.Group()  # Grupo de sprites do chão o qual esse objeto causa a renderização
-		self.current_health = 8
-		self.maximum_health = 8
+		self.current_health = self.atr['mhp']
 		self.health_bar_length = 10
-		self.health_ratio = self.maximum_health / self.health_bar_length
+		self.health_ratio = self.atr['mhp'] / self.health_bar_length
 		self.hb_show = False
 		self.hb_size = (10, (self.current_health / self.health_ratio) * 5)  # Barra vermelha
 		self.hb_pos = (self.rect.x, self.rect.y)
 		self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
 		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length, self.hb_size[1]))  # Borda preta
 		self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
-		self.spd = 3
 		self.areamov = set()
 		self.caminhos = dict()  # Dicionário destino: caminho
 		self.caminhoativo = list()
@@ -44,6 +50,7 @@ class Aliado(pygame.sprite.Sprite):
 		self.xprox = int()
 		self.yprox = int()
 		self.velmov = 4
+		self.hitchances = dict()
 
 	def update(self, img: str = 'def', rot: bool = True, movimentar=False, blocodestino=None):
 		"""
@@ -86,16 +93,34 @@ class Aliado(pygame.sprite.Sprite):
 			self.current_health = 0
 
 	def get_health(self, valor):
-		if self.current_health < self.maximum_health:
+		if self.current_health < self.atr['mhp']:
 			self.current_health += valor
 		else:
-			self.current_health = self.maximum_health
+			self.current_health = self.atr['mhp']
 
-	def atacar(self, valor: int = 1):
-		self.mira.get_damage(valor)
-		if self.mira.current_health < self.mira.maximum_health:
-			self.mira.hb_show = True
-		self.mira.update()
+	def atacar(self):
+		c = randint(1, 100)
+		if c <= self.hitchances[self.mira]:
+			dano = randint(self.atr['dmg'][0], self.atr['dmg'][1])
+			c = randint(1, 100)
+			if c <= self.atr['crt']:  # Crítico
+				print('Crítico!')
+				dano = self.atr['dmg'][1] + round(dano * 1.4)
+			self.mira.get_damage(dano)
+			if not self.mira.hb_show:
+				self.mira.hb_show = True
+			self.mira.update()
+			self.update()  # Talvez não seja necessário
+			print(f'Ataque Realizado, Dano: {dano}')
+			return True
+		print('Ataque Falhou')
+		return False
+
+	def gethitchances(self, prs, dst):
+		chance = round(100 - ((3 * (dst ** 2)) * (log10(dst))) / (180 * self.atr['acc']))
+		self.hitchances[prs] = chance
+		print(f'Chance = {chance}%')
+		return chance
 
 	def movimentar(self, blocodestino=None):
 		vetor = pygame.math.Vector2()
@@ -173,21 +198,26 @@ class Inimigo(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect()
 		self.pos = pos
 		self.nome = nome
+		self.atr = {  # Atributos do personagem
+			'mhp': 8,
+			'spd': 3,
+			'dmg': (1, 3),  # Dano mínimo e máximo
+			'acc': 3,
+			'crt': 3  # Porcentagem de acerto crítico
+		}
 		self.bloco = None
 		self.mira: Aliado | Inimigo | None = None
 		self.miraangulos = dict()
 		self.area = pygame.sprite.Group()
 		self.current_health = 8
-		self.maximum_health = 8
 		self.health_bar_length = 10
-		self.health_ratio = self.maximum_health / self.health_bar_length
+		self.health_ratio = self.atr['mhp'] / self.health_bar_length
 		self.hb_show = False
 		self.hb_size = (10, (self.current_health / self.health_ratio) * 5)  # Barra vermelha
 		self.hb_pos = (self.rect.x, self.rect.y)
 		self.hrect = pygame.Rect(self.hb_pos, self.hb_size)
 		self.hbbrect = pygame.Rect(self.hb_pos, (self.health_bar_length, self.hb_size[1]))  # Borda preta
 		self.hrect.bottom = self.hbbrect.bottom  # Reposicionar barra vermelha
-		self.spd = 3
 		self.areamov = set()
 		self.caminhos = dict()
 		self.caminhoativo = list()
@@ -195,6 +225,7 @@ class Inimigo(pygame.sprite.Sprite):
 		self.xprox = int()
 		self.yprox = int()
 		self.velmov = 4
+		self.hitchances = dict()
 
 	def update(self, img: str = 'def', rot: bool = True, movimentar=False, blocodestino=None):
 		"""
@@ -237,16 +268,34 @@ class Inimigo(pygame.sprite.Sprite):
 			self.current_health = 0
 
 	def get_health(self, valor):
-		if self.current_health < self.maximum_health:
+		if self.current_health < self.atr['mhp']:
 			self.current_health += valor
 		else:
-			self.current_health = self.maximum_health
+			self.current_health = self.atr['mhp']
 
-	def atacar(self, valor: int = 1):
-		self.mira.get_damage(valor)
-		if self.mira.current_health < self.mira.maximum_health:
-			self.mira.hb_show = True
-		self.mira.update()
+	def atacar(self):
+		c = randint(1, 100)
+		if c <= self.hitchances[self.mira]:
+			dano = randint(self.atr['dmg'][0], self.atr['dmg'][1])
+			c = randint(1, 100)
+			if c <= self.atr['crt']:  # Crítico
+				print('Crítico!')
+				dano = self.atr['dmg'][1] + round(dano * 1.4)
+			self.mira.get_damage(dano)
+			if not self.mira.hb_show:
+				self.mira.hb_show = True
+			self.mira.update()
+			self.update()  # Talvez não seja necessário
+			print(f'Ataque Realizado, Dano: {dano}')
+			return True
+		print('Ataque Falhou')
+		return False
+
+	def gethitchances(self, prs, dst):
+		chance = round(100 - ((3 * (dst ** 2)) * (log10(dst))) / (180 * self.atr['acc']))
+		self.hitchances[prs] = chance
+		print(f'Chance = {chance}%')
+		return chance
 
 	def movimentar(self, blocodestino=None):
 		vetor = pygame.math.Vector2()
