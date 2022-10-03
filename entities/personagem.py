@@ -49,17 +49,17 @@ class Soldado(pygame.sprite.Sprite):
 
 	def getskin(self):
 		if self.time == 'A':
-			imgdef = pygame.image.load('graphics/aliados/aliado.png')
-			imgslc = pygame.image.load('graphics/aliados/aliado_slc.png')
-			imgatk = pygame.image.load('graphics/aliados/aliado_atk.png')
+			imgdef = pygame.image.load('assets/images/aliados/aliado.png')
+			imgslc = pygame.image.load('assets/images/aliados/aliado_slc.png')
+			imgatk = pygame.image.load('assets/images/aliados/aliado_atk.png')
 		else:
-			imgdef = pygame.image.load('graphics/inimigos/inimigo.png')
-			imgslc = pygame.image.load('graphics/inimigos/inimigo_slc.png')
-			imgatk = pygame.image.load('graphics/inimigos/inimigo_atk.png')
+			imgdef = pygame.image.load('assets/images/inimigos/inimigo.png')
+			imgslc = pygame.image.load('assets/images/inimigos/inimigo_slc.png')
+			imgatk = pygame.image.load('assets/images/inimigos/inimigo_atk.png')
 		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
 		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
 		imgatk = pygame.transform.scale(imgatk, pygame.math.Vector2(imgatk.get_size()) * 4).convert_alpha()
-		sombra = pygame.image.load('graphics/detalhes/sombra1.png')
+		sombra = pygame.image.load('assets/images/detalhes/sombra1.png')
 		self.imgs = {'def': imgdef, 'slc': imgslc, 'atk': imgatk}
 		self.sombra_surf = pygame.transform.scale(sombra, pygame.math.Vector2(sombra.get_size()) * 4).convert_alpha()
 		self.sombra_rect = self.sombra_surf.get_rect()

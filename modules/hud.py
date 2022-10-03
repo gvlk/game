@@ -4,7 +4,7 @@ import pygame.freetype
 from main import s_res, font
 s_w, s_h = s_res
 
-from personagem import Soldado
+from entities.personagem import Soldado
 
 
 class Hud:
@@ -31,15 +31,15 @@ class Hud:
 			self.menu[item] = menuitem
 
 	def __init__(self):
-		imgdef = pygame.image.load('graphics/hud/template/hud.png').convert_alpha()
+		imgdef = pygame.image.load('assets/images/hud/template/hud.png').convert_alpha()
 		imgdef = pygame.transform.smoothscale(imgdef, s_res)
-		imgcnt = pygame.image.load('graphics/hud/template/container.png')
+		imgcnt = pygame.image.load('assets/images/hud/template/container.png')
 		self.cnt_res = (112, 56)
 		imgcnt = pygame.transform.smoothscale(imgcnt, self.cnt_res)
-		self.imgmov = pygame.image.load('graphics/hud/menu/mov.png').convert_alpha()
-		self.imgmovslc = pygame.image.load('graphics/hud/menu/mov_slc.png').convert_alpha()
-		self.imgatk = pygame.image.load('graphics/hud/menu/atk.png').convert_alpha()
-		self.imgatkslc = pygame.image.load('graphics/hud/menu/atk_slc.png').convert_alpha()
+		self.imgmov = pygame.image.load('assets/images/hud/menu/mov.png').convert_alpha()
+		self.imgmovslc = pygame.image.load('assets/images/hud/menu/mov_slc.png').convert_alpha()
+		self.imgatk = pygame.image.load('assets/images/hud/menu/atk.png').convert_alpha()
+		self.imgatkslc = pygame.image.load('assets/images/hud/menu/atk_slc.png').convert_alpha()
 		self.font = font
 		self.font.fgcolor = (255, 255, 255)
 		self.font.size = 40

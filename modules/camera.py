@@ -1,15 +1,14 @@
 import pygame
-from main import s_res
-from personagem import Soldado
-
+from entities.personagem import Soldado
 
 class CameraGroup(pygame.sprite.Group):
-	def __init__(self, surface):
+	def __init__(self, surface, screen_resolution):
 		super().__init__()
+		self.screen_resolution = screen_resolution
 		self.surface = surface
 		self.ground = None
 		self.offset = pygame.math.Vector2()
-		self.half_w, self.half_h = (s_res[0] / 2, s_res[1] / 2)
+		self.half_w, self.half_h = (self.screen_resolution[0] / 2, self.screen_resolution[1] / 2)
 		self.camera_border = {
 			'left': 200,
 			'right': 200,
@@ -18,8 +17,8 @@ class CameraGroup(pygame.sprite.Group):
 		}
 		lb = self.camera_border['left']
 		tb = self.camera_border['top']
-		wb = s_res[0] - (self.camera_border['left'] + self.camera_border['right'])
-		hb = s_res[1] - (self.camera_border['top'] + self.camera_border['bottom'])
+		wb = self.screen_resolution[0] - (self.camera_border['left'] + self.camera_border['right'])
+		hb = self.screen_resolution[1] - (self.camera_border['top'] + self.camera_border['bottom'])
 		self.camera_rect = pygame.Rect(lb, tb, wb, hb)
 		self.keyboard_speed = 15
 		self.mouse_speed = 0.4
@@ -48,17 +47,17 @@ class CameraGroup(pygame.sprite.Group):
 		else:
 			left_border = 0
 		if right > limite:
-			right_border = s_res[0] - self.camera_border['right']
+			right_border = self.screen_resolution[0] - self.camera_border['right']
 		else:
-			right_border = s_res[0]
+			right_border = self.screen_resolution[0]
 		if top < limite:
 			top_border = self.camera_border['top']
 		else:
 			top_border = 0
 		if bottom > limite:
-			bottom_border = s_res[1] - self.camera_border['bottom']
+			bottom_border = self.screen_resolution[1] - self.camera_border['bottom']
 		else:
-			bottom_border = s_res[1]
+			bottom_border = self.screen_resolution[1]
 
 		if top_border < mouse.y < bottom_border:
 			if mouse.x < left_border:

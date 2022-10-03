@@ -1,7 +1,7 @@
 import pygame
 
 pygame.init()
-font = pygame.font.Font('fontes/IBMPlexMono-Regular.ttf', 12)
+font = pygame.font.Font('assets/fonts/IBMPlexMono-Regular.ttf', 12)
 
 
 def debug(info, x=20, y=130):

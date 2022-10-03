@@ -1,17 +1,18 @@
 import pygame
 from random import randint
 
-bloco_qnt = 5  # Mais 2 tiles externos de borda
 bloco_tam = 128
 render_dist = 5
 
-from personagem import Soldado
-from bloco import Bloco
-from camera import CameraGroup
+from entities.personagem import Soldado
+from modules.bloco import Bloco
+from modules.camera import CameraGroup
 
 
 class Tabuleiro:
-	def __init__(self):
+	def __init__(self, screen_resolution):
+		self.tile_amount = 5
+
 		self.groupchao_all = None
 		self.groupchao = pygame.sprite.Group()
 		self.grouptimeA = pygame.sprite.Group()
@@ -22,24 +23,24 @@ class Tabuleiro:
 		self.objslc: Soldado | None = None
 		self.grade = tuple()
 		self.caminhoativo = tuple()
-		self.width = bloco_qnt * bloco_tam + (2 * bloco_tam)
+		self.width = self.tile_amount * bloco_tam + (2 * bloco_tam)
 		self.height = self.width
 		self.surf = pygame.Surface((self.width, self.height))
-		self.camera_group = CameraGroup(self.surf)
+		self.camera_group = CameraGroup(self.surf, screen_resolution)
 		self.rect = self.camera_group.tabuleiro_pos()
 		self.gerargrade()
 
 	def gerargrade(self) -> None:
-		from bloco import Bloco
+		from modules.bloco import Bloco
 		grade = list()
 		sptlist = list()
-		for cx in range(0, bloco_qnt + 2):
+		for cx in range(0, self.tile_amount + 2):
 			x = cx * bloco_tam
 			coluna = list()
-			for ly in range(0, bloco_qnt + 2):
+			for ly in range(0, self.tile_amount + 2):
 				y = ly * bloco_tam
 				bloco = Bloco(x, y)
-				if ly == 0 or ly == bloco_qnt + 1 or cx == 0 or cx == bloco_qnt + 1:
+				if ly == 0 or ly == self.tile_amount + 1 or cx == 0 or cx == self.tile_amount + 1:
 					bloco.imgind()
 					bloco.ind = True
 				sptlist.append(bloco)
@@ -180,12 +181,12 @@ class Tabuleiro:
 		for x in range(obj_posx - obj.atr['spd'], obj_posx + obj.atr['spd'] + 1):
 			if x < 1:
 				continue
-			if x > bloco_qnt:
+			if x > self.tile_amount:
 				break
 			for y in range(obj_posy - obj.atr['spd'], obj_posy + obj.atr['spd'] + 1):
 				if y < 1:
 					continue
-				if y > bloco_qnt:
+				if y > self.tile_amount:
 					break
 				dis = abs(x - obj_posx) + abs(y - obj_posy)
 				if 0 < dis <= obj.atr['spd']:
@@ -325,12 +326,12 @@ class Tabuleiro:
 		# Clamp
 		if posx <= 1:
 			posx = 1
-		elif posx >= bloco_qnt:
-			posx = bloco_qnt
+		elif posx >= self.tile_amount:
+			posx = self.tile_amount
 		if posy <= 1:
 			posy = 1
-		elif posy >= bloco_qnt:
-			posy = bloco_qnt
+		elif posy >= self.tile_amount:
+			posy = self.tile_amount
 		return self.grade[posx][posy]
 
 	def renderchao(self, obj: Soldado, pos_a: tuple = False) -> None:
@@ -339,12 +340,12 @@ class Tabuleiro:
 			min_x = pos_a[0] - render_dist
 			max_y = pos_a[1] + render_dist + 1
 			min_y = pos_a[1] - render_dist
-			if max_x > bloco_qnt + 2:
-				max_x = bloco_qnt + 2
+			if max_x > self.tile_amount + 2:
+				max_x = self.tile_amount + 2
 			if min_x < 0:
 				min_x = 0
-			if max_y > bloco_qnt + 2:
-				max_y = bloco_qnt + 2
+			if max_y > self.tile_amount + 2:
+				max_y = self.tile_amount + 2
 			if min_y < 0:
 				min_y = 0
 			for y in range(min_y, max_y):
@@ -358,12 +359,12 @@ class Tabuleiro:
 		min_x = obj.pos[0] - render_dist
 		max_y = obj.pos[1] + render_dist + 1
 		min_y = obj.pos[1] - render_dist
-		if max_x > bloco_qnt + 2:
-			max_x = bloco_qnt + 2
+		if max_x > self.tile_amount + 2:
+			max_x = self.tile_amount + 2
 		if min_x < 0:
 			min_x = 0
-		if max_y > bloco_qnt + 2:
-			max_y = bloco_qnt + 2
+		if max_y > self.tile_amount + 2:
+			max_y = self.tile_amount + 2
 		if min_y < 0:
 			min_y = 0
 		for y in range(min_y, max_y):

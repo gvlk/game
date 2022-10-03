@@ -4,12 +4,12 @@ import pygame
 class Bloco(pygame.sprite.Sprite):
 	def __init__(self, x, y):
 		super().__init__()
-		imgdef = pygame.image.load('graphics/chao/chao.png')
-		imgslc = pygame.image.load('graphics/chao/chao_slc.png')
-		imgind = pygame.image.load('graphics/chao/chao_ind.png')
-		imgmse = pygame.image.load('graphics/chao/chao_mse.png')
-		imgmov = pygame.image.load('graphics/chao/chao_mov.png')
-		imgmovslc = pygame.image.load('graphics/chao/chao_movslc.png')
+		imgdef = pygame.image.load('assets/images/chao/chao.png')
+		imgslc = pygame.image.load('assets/images/chao/chao_slc.png')
+		imgind = pygame.image.load('assets/images/chao/chao_ind.png')
+		imgmse = pygame.image.load('assets/images/chao/chao_mse.png')
+		imgmov = pygame.image.load('assets/images/chao/chao_mov.png')
+		imgmovslc = pygame.image.load('assets/images/chao/chao_movslc.png')
 		imgdef = pygame.transform.scale(imgdef, pygame.math.Vector2(imgdef.get_size()) * 4).convert_alpha()
 		imgslc = pygame.transform.scale(imgslc, pygame.math.Vector2(imgslc.get_size()) * 4).convert_alpha()
 		imgind = pygame.transform.scale(imgind, pygame.math.Vector2(imgind.get_size()) * 4).convert_alpha()
