@@ -216,12 +216,12 @@ class GameController:
         self.mouse_group.draw(self.screen)
 
         # debug
-        self.debug.display(f'FPS {int(self.clock.get_fps())}')
-        self.debug.display(f'Current Mode: {self.board.current_mode}', y=150)
-        self.debug.display(f'Selected Soldier: {self.board.selected_soldier}', y=170)
-        self.debug.display('Soldiers:', y=190)
+        self.debug.display(f'FPS {int(self.clock.get_fps())}', 1)
+        self.debug.display(f'Current Mode: {self.board.current_mode}', 2)
+        self.debug.display(f'Selected Soldier: {self.board.selected_soldier}', 3)
+        self.debug.display('Soldiers:', 4)
         for i, soldier in enumerate(self.board.group_soldiers):
-            self.debug.display(f'{soldier}, Tile: {soldier.pos}, Rect: {soldier.rect}', y=210 + (i * 20))
+            self.debug.display(f'{soldier}, Tile: {soldier.pos}, Rect: {soldier.rect}', 5 + i)
 
         # run tick
         pygame.display.update()
