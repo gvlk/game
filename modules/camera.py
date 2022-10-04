@@ -1,5 +1,7 @@
 import pygame
-from entities.personagem import Soldado
+from pygame.math import Vector2
+from entities.soldier import Soldier
+
 
 class CameraGroup(pygame.sprite.Group):
 	def __init__(self, surface, screen_resolution):
@@ -33,12 +35,12 @@ class CameraGroup(pygame.sprite.Group):
 		self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
 		self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))
 
-	def centralizar_alvo(self, alvo, tabuleiro):
+	def centralizeTarget(self, alvo: pygame.sprite.Sprite, tabuleiro) -> None:
 		self.offset.x = (tabuleiro.rect.w / 2) - alvo.rect.centerx
 		self.offset.y = (tabuleiro.rect.h / 2) - alvo.rect.centery
-		tabuleiro.rect = self.tabuleiro_pos()
+		tabuleiro.rect = self.getBoardRect()
 
-	def mouse_control(self, left, right, top, bottom, mouse):
+	def mouseControl(self, left: int, right: int, top: int, bottom: int, mouse: Vector2) -> None:
 		mouse = pygame.math.Vector2(mouse)
 		mouse_offset = pygame.math.Vector2()
 		limite = self.internal_surf_size[0] / 2
@@ -90,7 +92,7 @@ class CameraGroup(pygame.sprite.Group):
 
 		self.offset -= mouse_offset * self.mouse_speed
 
-	def keyboard_control(self, left, right, top, bottom):
+	def keyboardControl(self, left: int, right: int, top: int, bottom: int) -> None:
 		limite = self.internal_surf_size[0] / 2
 		keys = pygame.key.get_pressed()
 		if keys[pygame.K_LEFT]:
@@ -106,16 +108,16 @@ class CameraGroup(pygame.sprite.Group):
 			if bottom > limite:
 				self.offset.y -= self.keyboard_speed
 
-	def tabuleiro_pos(self):
+	def getBoardRect(self) -> pygame.Rect:
 		offset_pos = pygame.math.Vector2(self.half_w, self.half_h) + self.offset + self.internal_offset
 		return self.surface.get_rect(center=offset_pos)
 
-	def drawsprites(self, tabuleiro, mouse):
-		sprite: Soldado
-		self.mouse_control(tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom, mouse)
-		self.keyboard_control(tabuleiro.rect.left, tabuleiro.rect.right, tabuleiro.rect.top, tabuleiro.rect.bottom)
+	def drawSprites(self, board, mouse: Vector2) -> None:
+		sprite: Soldier
+		self.mouseControl(board.rect.left, board.rect.right, board.rect.top, board.rect.bottom, mouse)
+		self.keyboardControl(board.rect.left, board.rect.right, board.rect.top, board.rect.bottom)
 
-		tabuleiro.rect = self.tabuleiro_pos()
+		board.rect = self.getBoardRect()
 
 		self.internal_surf.fill('Grey')
 
@@ -124,14 +126,14 @@ class CameraGroup(pygame.sprite.Group):
 			self.surface.blit(sprite.image, offset_pos)
 
 		for sprite in sorted(self.sprites(), key=lambda spr: spr.rect.centery):
-			self.surface.blit(sprite.sombra_surf, sprite.sombra_rect)
+			self.surface.blit(sprite.shadow_surf, sprite.shadow_rect)
 			offset_pos = sprite.rect.topleft
 			self.surface.blit(sprite.image, offset_pos)
 			if sprite.hb_show:  # Health Bar
-				pygame.draw.rect(self.surface, (255, 0, 0), sprite.hrect)
-				pygame.draw.rect(self.surface, (0, 0, 0), sprite.hbbrect, 2)
+				pygame.draw.rect(self.surface, (255, 0, 0), sprite.hb_rect)
+				pygame.draw.rect(self.surface, (0, 0, 0), sprite.hb_b_rect, 2)
 
-		self.internal_surf.blit(tabuleiro.surf, tabuleiro.rect)
+		self.internal_surf.blit(board.surf, board.rect)
 
 	# self.scaled_surf = pygame.transform.scale(self.internal_surf, self.internal_surf_size_vector * self.zoom)
 	# self.scaled_rect = self.scaled_surf.get_rect(center=(self.half_w, self.half_h))
